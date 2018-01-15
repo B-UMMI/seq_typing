@@ -23,9 +23,9 @@ def get_best_sequence(data_by_gene, minGeneCoverage):
     elif len(sequence) == 0:
         sequence = None
     else:
-        sequence = sequence[sorted(sequence.keys(), reverse=True)[0]]
         for gene in [sequence[i] for i in sorted(sequence.keys(), reverse=True)[1:]]:
             probable_sequences[gene] = (data_by_gene[gene]['gene_mean_read_coverage'], data_by_gene[gene]['gene_mean_read_coverage'])
+        sequence = sequence[sorted(sequence.keys(), reverse=True)[0]]
 
     return sequence, probable_sequences
 
