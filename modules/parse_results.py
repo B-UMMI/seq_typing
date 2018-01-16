@@ -70,10 +70,11 @@ def split_references_results_by_references(references_results, references_header
                     if data['header'] in headers.keys():
                         organized_references_results[reference_file][data['header']] = data
     else:
-        organized_references_results[next(iter(references_results.values()))] = {}
-        for data_counter in references_results.values():
-            for counter, data in data_counter.items():
-                organized_references_results[reference_file][data['header']] = data
+        organized_references_results[next(iter(references_results.keys()))] = {}
+        for reference, pickleFile in references_results.items():
+            data_by_gene = utils.extractVariableFromPickle(pickleFile)
+            for counter, data in data_by_gene.items():
+                organized_references_results[reference][data['header']] = data
     return organized_references_results
 
 
