@@ -217,7 +217,7 @@ def main():
     # Parse ReMatCh results
     pickleFile = os.path.join(pickles_folder, 'parse_results.pkl')
     if not os.path.isfile(pickleFile) or args.beginning:
-        seq_type, probable_results = parse_results.parse_results(references_results, args.reference, references_headers, args.outdir, args.minGeneCoverage, args.typeSeparator)
+        seq_type, seq_type_info, probable_results = parse_results.parse_results(references_results, args.reference, references_headers, args.outdir, args.minGeneCoverage, args.typeSeparator)
         utils.saveVariableToPickle([seq_type, probable_results], pickleFile)
     else:
         print('Results parser module already run')
