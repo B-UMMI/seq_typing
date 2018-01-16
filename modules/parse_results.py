@@ -103,7 +103,7 @@ def parse_results(references_results, references_files, references_headers, outd
     references_results = split_references_results_by_references(references_results, references_headers)
     seq_type, seq_type_info, probable_results = get_results(references_results, minGeneCoverage, typeSeparator, references_files, references_headers)
     write_reports(outdir, seq_type, seq_type_info, probable_results)
-    return seq_type, probable_results
+    return seq_type, seq_type_info, probable_results
 
 
 # references_headers = {reference_file: {new_header: original_header}}
