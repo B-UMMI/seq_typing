@@ -86,7 +86,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results):
         print('\n' + 'Types found:' + '\n')
         print(seq_type + '\n')
         for reference, data in seq_type_info.items():
-            print('\n' + '\n'.join(['Reference_file: {}'.format(reference), 'Sequence: {}'.format(data[0]), 'Sequenced covered: {}'.format(data[1]), 'Coverage depth: {}'.format(data[2]), 'Sequence identity: {}'.format(data[3])]) + '\n')
+            print('\n' + '\n'.join(['Reference file: {}'.format(reference), 'Sequence: {}'.format(data[0]), 'Sequenced covered: {}'.format(data[1]), 'Coverage depth: {}'.format(data[2]), 'Sequence identity: {}'.format(data[3])]) + '\n')
     with open(os.path.join(outdir, 'seq_typing.report.other_probable_types.tab'), 'wt') as writer:
         header_other_probable_types = False
         for reference, types in probable_results.items():
