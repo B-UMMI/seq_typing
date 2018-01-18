@@ -53,7 +53,7 @@ def get_results(references_results, minGeneCoverage, typeSeparator, references_f
                         results_info[original_reference] = (original_header, references_results[original_reference][new_header]['gene_coverage'], references_results[original_reference][new_header]['gene_mean_read_coverage'], references_results[original_reference][new_header]['gene_identity'])
                     if len(probable_sequences) > 0:
                         if new_header in probable_sequences:
-                            probable_results[original_reference].append((original_header, probable_sequences[new_header][0], probable_sequences[new_header][1]), probable_sequences[new_header][2])
+                            probable_results[original_reference].append((original_header, probable_sequences[new_header][0], probable_sequences[new_header][1], probable_sequences[new_header][2]))
                     if sequence == new_header and (len(probable_sequences) == 0 or len(probable_results[original_reference]) == len(probable_sequences)):
                         break
 
