@@ -6,6 +6,7 @@ import modules.utils as utils
 def get_best_sequence(data_by_gene, minGeneCoverage):
     sequence = {}
     probable_sequences = {}
+    improbable_sequences = {}
 
     for gene, rematch_results in data_by_gene.items():
         if rematch_results['gene_coverage'] >= minGeneCoverage:
@@ -17,6 +18,8 @@ def get_best_sequence(data_by_gene, minGeneCoverage):
                     sequence[rematch_results['gene_coverage']] = gene
                 else:
                     probable_sequences[gene] = (rematch_results['gene_coverage'], rematch_results['gene_mean_read_coverage'], rematch_results['gene_identity'])
+        else:
+            improbable_sequences[rematch_results['gene_coverage']] = gene
 
     if len(sequence) == 1:
         sequence = next(iter(sequence.values()))  # Get the first one
@@ -27,7 +30,12 @@ def get_best_sequence(data_by_gene, minGeneCoverage):
             probable_sequences[gene] = (data_by_gene[gene]['gene_coverage'], data_by_gene[gene]['gene_mean_read_coverage'], data_by_gene[gene]['gene_identity'])
         sequence = sequence[sorted(sequence.keys(), reverse=True)[0]]
 
-    return (sequence, probable_sequences)
+    if len(improbable_sequences) > 0:
+        improbable_sequences = improbable_sequences[sorted(improbable_sequences.keys(), reverse=True)[0]]
+    else:
+        improbable_sequences = None
+
+    return (sequence, probable_sequences, improbable_sequences)
 
 
 def get_results(references_results, minGeneCoverage, typeSeparator, references_files, references_headers):
@@ -45,6 +53,7 @@ def get_results(references_results, minGeneCoverage, typeSeparator, references_f
     for reference, data in intermediate_results.items():
         sequence = data[0]
         probable_sequences = data[1]
+        improbable_sequences = data[2]
         if sequence is not None:
             for original_reference, headers in references_headers.items():
                 for new_header, original_header in headers.items():
@@ -56,6 +65,12 @@ def get_results(references_results, minGeneCoverage, typeSeparator, references_f
                             probable_results[original_reference].append((original_header, probable_sequences[new_header][0], probable_sequences[new_header][1], probable_sequences[new_header][2]))
                     if sequence == new_header and (len(probable_sequences) == 0 or len(probable_results[original_reference]) == len(probable_sequences)):
                         break
+        else:
+            if improbable_sequences is not None:
+                for original_reference, headers in references_headers.items():
+                    for new_header, original_header in headers.items():
+                        if improbable_sequences == new_header:
+                            print('\n' + '\n'.join(['NONE TYPEABLE REFERENCE', 'Reference file: {}'.format(reference), 'Most likely sequence: {}'.format(improbable_sequences), 'Sequenced covered: {}'.format(references_results[original_reference][improbable_sequences]['gene_coverage']), 'Coverage depth: {}'.format(references_results[original_reference][improbable_sequences]['gene_mean_read_coverage']), 'Sequence identity: {}'.format(references_results[original_reference][improbable_sequences]['gene_identity'])]) + '\n')
 
     return ':'.join([results[reference] for reference in references_files]), results_info, probable_results
 
@@ -96,6 +111,10 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results):
                     header_other_probable_types = True
                     print('\n' + 'Other possible types found! Check seq_typing.report.other_probable_types.tab file.' + '\n')
                 for probable_type in types:
+                    utils.Bcolors_print('probable_results: {}'.format(probable_results), 'HEADER')
+                    utils.Bcolors_print('reference: {}'.format(reference), 'HEADER')
+                    utils.Bcolors_print('types: {}'.format(types), 'HEADER')
+                    utils.Bcolors_print('probable_type: {}'.format(probable_type), 'HEADER')
                     writer.write('\t'.join([reference] + map(str, probable_type)) + '\n')
 
 
