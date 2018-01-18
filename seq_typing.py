@@ -138,6 +138,9 @@ def prepare_references(references, mapRefTogether, references_dir):
 
 
 def main():
+    if sys.version_info[0] < 3:
+        sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
+
     parser = argparse.ArgumentParser(prog='seq_typing.py', description='Determine which reference sequence is more likely to be present in a given sample', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--version', help='Version information', action='version', version=str('%(prog)s v' + version))
 
