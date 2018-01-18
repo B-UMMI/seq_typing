@@ -27,7 +27,7 @@ def get_best_sequence(data_by_gene, minGeneCoverage):
             probable_sequences[gene] = (data_by_gene[gene]['gene_coverage'], data_by_gene[gene]['gene_mean_read_coverage'], data_by_gene[gene]['gene_identity'])
         sequence = sequence[sorted(sequence.keys(), reverse=True)[0]]
 
-    return sequence, probable_sequences
+    return (sequence, probable_sequences)
 
 
 def get_results(references_results, minGeneCoverage, typeSeparator, references_files, references_headers):
@@ -94,7 +94,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results):
                 if not header_other_probable_types:
                     writer.write('\t'.join(['#reference_file', 'sequence', 'sequenced_covered', 'coverage_depth', 'sequence_identity']) + '\n')
                     header_other_probable_types = True
-                    print('\n' + 'Other possible types found! Check seq_typing.report.other_probable_types.tab file)' + '\n')
+                    print('\n' + 'Other possible types found! Check seq_typing.report.other_probable_types.tab file.' + '\n')
                 for probable_type in types:
                     writer.write('\t'.join([reference] + map(str, probable_type)) + '\n')
 
