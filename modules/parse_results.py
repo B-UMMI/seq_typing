@@ -46,9 +46,11 @@ def get_results(references_results, minGeneCoverage, typeSeparator, references_f
     results = {}
     results_info = {}
     probable_results = {}
+    improbable_results = {}
     for original_reference in references_headers.keys():
         results[original_reference] = 'NT'  # For None Typeable
         probable_results[original_reference] = []
+        improbable_results[original_reference] = []
 
     for reference, data in intermediate_results.items():
         sequence = data[0]
@@ -70,9 +72,10 @@ def get_results(references_results, minGeneCoverage, typeSeparator, references_f
                 for original_reference, headers in references_headers.items():
                     for new_header, original_header in headers.items():
                         if improbable_sequences == new_header:
-                            print('\n' + '\n'.join(['NONE TYPEABLE REFERENCE', 'Reference file: {}'.format(reference), 'Most likely sequence: {}'.format(improbable_sequences), 'Sequenced covered: {}'.format(references_results[original_reference][improbable_sequences]['gene_coverage']), 'Coverage depth: {}'.format(references_results[original_reference][improbable_sequences]['gene_mean_read_coverage']), 'Sequence identity: {}'.format(references_results[original_reference][improbable_sequences]['gene_identity'])]) + '\n')
+                            print('\n' + '\n'.join(['NONE TYPEABLE REFERENCE', 'Reference file: {}'.format(reference), 'Most likely sequence: {}'.format(new_header), 'Sequenced covered: {}'.format(references_results[original_reference][new_header]['gene_coverage']), 'Coverage depth: {}'.format(references_results[original_reference][new_header]['gene_mean_read_coverage']), 'Sequence identity: {}'.format(references_results[original_reference][new_header]['gene_identity'])]) + '\n')
+                            improbable_results[original_reference] = (original_header, references_results[original_reference][new_header]['gene_coverage'], references_results[original_reference][new_header]['gene_mean_read_coverage'], references_results[original_reference][new_header]['gene_identity'])
 
-    return ':'.join([results[reference] for reference in references_files]), results_info, probable_results
+    return ':'.join([results[reference] for reference in references_files]), results_info, probable_results, improbable_results
 
 
 def split_references_results_by_references(references_results, references_headers):
@@ -95,34 +98,40 @@ def split_references_results_by_references(references_results, references_header
     return organized_references_results
 
 
-def write_reports(outdir, seq_type, seq_type_info, probable_results):
+def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results):
     with open(os.path.join(outdir, 'seq_typing.report.txt'), 'wt') as writer:
         writer.write(seq_type + '\n')
+
+    with open(os.path.join(outdir, 'seq_typing.report_types.tab'), 'wt') as writer:
+        header_report_types = False
+        if not header_report_types:
+            writer.write('\t'.join(['#sequence_type', 'reference_file', 'sequence', 'sequenced_covered', 'coverage_depth', 'sequence_identity']) + '\n')
+            header_report_types = True
+
+        print('\n' + 'TYPEABLE REFERENCES')
+        for reference, data in seq_type_info.items():
+            if len(data) > 0:
+                print('\n' + '\n'.join(['Reference file: {}'.format(reference), 'Sequence: {}'.format(data[0]), 'Sequenced covered: {}'.format(data[1]), 'Coverage depth: {}'.format(data[2]), 'Sequence identity: {}'.format(data[3])]) + '\n')
+                writer.write('\t'.join(['selected', reference] + list(map(str, data))) + '\n')
         print('\n' + 'Types found:' + '\n')
         print(seq_type + '\n')
-        for reference, data in seq_type_info.items():
-            print('\n' + '\n'.join(['Reference file: {}'.format(reference), 'Sequence: {}'.format(data[0]), 'Sequenced covered: {}'.format(data[1]), 'Coverage depth: {}'.format(data[2]), 'Sequence identity: {}'.format(data[3])]) + '\n')
-    with open(os.path.join(outdir, 'seq_typing.report.other_probable_types.tab'), 'wt') as writer:
-        header_other_probable_types = False
+
         for reference, types in probable_results.items():
             if len(types) > 0:
-                if not header_other_probable_types:
-                    writer.write('\t'.join(['#reference_file', 'sequence', 'sequenced_covered', 'coverage_depth', 'sequence_identity']) + '\n')
-                    header_other_probable_types = True
-                    print('\n' + 'Other possible types found! Check seq_typing.report.other_probable_types.tab file.' + '\n')
+                print('\n' + 'Other possible types found! Check seq_typing.report.other_probable_types.tab file.' + '\n')
                 for probable_type in types:
-                    utils.Bcolors_print('probable_results: {}'.format(probable_results), 'HEADER')
-                    utils.Bcolors_print('reference: {}'.format(reference), 'HEADER')
-                    utils.Bcolors_print('types: {}'.format(types), 'HEADER')
-                    utils.Bcolors_print('probable_type: {}'.format(probable_type), 'HEADER')
-                    writer.write('\t'.join([reference] + map(str, probable_type)) + '\n')
+                    writer.write('\t'.join(['other_probable_type', reference] + list(map(str, probable_type))) + '\n')
+
+        for reference, data in improbable_results.items():
+            if len(data) > 0:
+                writer.write('\t'.join(['most_likely', reference] + list(map(str, data))) + '\n')
 
 
 def parse_results(references_results, references_files, references_headers, outdir, minGeneCoverage, typeSeparator):
     references_results = split_references_results_by_references(references_results, references_headers)
-    seq_type, seq_type_info, probable_results = get_results(references_results, minGeneCoverage, typeSeparator, references_files, references_headers)
-    write_reports(outdir, seq_type, seq_type_info, probable_results)
-    return seq_type, seq_type_info, probable_results
+    seq_type, seq_type_info, probable_results, improbable_results = get_results(references_results, minGeneCoverage, typeSeparator, references_files, references_headers)
+    write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results)
+    return seq_type, seq_type_info, probable_results, improbable_results
 
 
 # references_headers = {reference_file: {new_header: original_header}}

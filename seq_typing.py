@@ -220,12 +220,12 @@ def main():
     # Parse ReMatCh results
     pickleFile = os.path.join(pickles_folder, 'parse_results.pkl')
     if not os.path.isfile(pickleFile) or args.beginning:
-        seq_type, seq_type_info, probable_results = parse_results.parse_results(references_results, args.reference, references_headers, args.outdir, args.minGeneCoverage, args.typeSeparator)
-        utils.saveVariableToPickle([seq_type, seq_type_info, probable_results], pickleFile)
+        seq_type, seq_type_info, probable_results, improbable_results = parse_results.parse_results(references_results, args.reference, references_headers, args.outdir, args.minGeneCoverage, args.typeSeparator)
+        utils.saveVariableToPickle([seq_type, seq_type_info, probable_results, improbable_results], pickleFile)
     else:
         print('Results parser module already run')
-        seq_type, seq_type_info, probable_results = utils.extractVariableFromPickle(pickleFile)
-        parse_results.write_reports(args.outdir, seq_type, seq_type_info, probable_results)
+        seq_type, seq_type_info, probable_results, improbable_results = utils.extractVariableFromPickle(pickleFile)
+        parse_results.write_reports(args.outdir, seq_type, seq_type_info, probable_results, improbable_results)
 
     if not args.notClean and not args.debug:
         for folder in folders_2_remove:
