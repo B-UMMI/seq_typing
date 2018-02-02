@@ -138,6 +138,9 @@ def prepare_references(references, mapRefTogether, references_dir):
 
 
 def main():
+    if sys.version_info[0] < 3:
+        sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
+
     parser = argparse.ArgumentParser(prog='seq_typing.py', description='Determine which reference sequence is more likely to be present in a given sample', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--version', help='Version information', action='version', version=str('%(prog)s v' + version))
 
@@ -217,12 +220,12 @@ def main():
     # Parse ReMatCh results
     pickleFile = os.path.join(pickles_folder, 'parse_results.pkl')
     if not os.path.isfile(pickleFile) or args.beginning:
-        seq_type, probable_results = parse_results.parse_results(references_results, args.reference, references_headers, args.outdir, args.minGeneCoverage, args.typeSeparator)
-        utils.saveVariableToPickle([seq_type, probable_results], pickleFile)
+        seq_type, seq_type_info, probable_results, improbable_results = parse_results.parse_results(references_results, args.reference, references_headers, args.outdir, args.minGeneCoverage, args.typeSeparator)
+        utils.saveVariableToPickle([seq_type, seq_type_info, probable_results, improbable_results], pickleFile)
     else:
         print('Results parser module already run')
-        seq_type, probable_results = utils.extractVariableFromPickle(pickleFile)
-        parse_results.write_reports(args.outdir, seq_type, probable_results)
+        seq_type, seq_type_info, probable_results, improbable_results = utils.extractVariableFromPickle(pickleFile)
+        parse_results.write_reports(args.outdir, seq_type, seq_type_info, probable_results, improbable_results)
 
     if not args.notClean and not args.debug:
         for folder in folders_2_remove:
