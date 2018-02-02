@@ -200,9 +200,25 @@ def trace_unhandled_exceptions(func):
     def wrapped_func(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except:
+        except Exception as e:
             print('Exception in ' + func.__name__)
+            print(e)
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback_details = {
+                                 'filename': exc_traceback.tb_frame.f_code.co_filename,
+                                 'lineno': exc_traceback.tb_lineno,
+                                 'name': exc_traceback.tb_frame.f_code.co_name,
+                                 'type': exc_type.__name__,
+                                 'message': exc_value.message,  # or see traceback._some_str()
+                                }
+            del (exc_type, exc_value, exc_traceback)
+            traceback_template = '''
+            Traceback (most recent call last):
+            File "%(filename)s", line %(lineno)s, in %(name)s %(type)s: %(message)s\n
+            '''
             traceback.print_exc()
+            print(traceback.format_exc())
+            print(traceback_template % traceback_details)
     return wrapped_func
 
 
@@ -254,8 +270,9 @@ def required_length(tuple_length_options, argument_name):
     class RequiredLength(argparse.Action):
         def __call__(self, parser, args, values, option_string=None):
             if len(values) not in tuple_length_options:
-                msg = 'Option {argument_name} requires one of the following number of arguments: {tuple_length_options}'.format(
-                    argument_name=self.argument_name, tuple_length_options=tuple_length_options)
+                msg = 'Option {argument_name} requires one of the following number of arguments:' \
+                      ' {tuple_length_options}'.format(argument_name=argument_name,
+                                                       tuple_length_options=tuple_length_options)
                 raise argparse.ArgumentTypeError(msg)
             setattr(args, self.dest, values)
     return RequiredLength
