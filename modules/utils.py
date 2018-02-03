@@ -200,9 +200,13 @@ def trace_unhandled_exceptions(func):
     def wrapped_func(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except:
+        except Exception as e:
             print('Exception in ' + func.__name__)
-            traceback.print_exc()
+            print(e)
+
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            # print(exc_value)
+            print(''.join(traceback.format_exception(exc_type, exc_value, exc_tb)))
     return wrapped_func
 
 
@@ -254,8 +258,9 @@ def required_length(tuple_length_options, argument_name):
     class RequiredLength(argparse.Action):
         def __call__(self, parser, args, values, option_string=None):
             if len(values) not in tuple_length_options:
-                msg = 'Option {argument_name} requires one of the following number of arguments: {tuple_length_options}'.format(
-                    argument_name=self.argument_name, tuple_length_options=tuple_length_options)
+                msg = 'Option {argument_name} requires one of the following number of arguments:' \
+                      ' {tuple_length_options}'.format(argument_name=argument_name,
+                                                       tuple_length_options=tuple_length_options)
                 raise argparse.ArgumentTypeError(msg)
             setattr(args, self.dest, values)
     return RequiredLength
