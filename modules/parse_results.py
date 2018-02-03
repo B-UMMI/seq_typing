@@ -115,7 +115,10 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
 
         for reference, types in probable_results.items():
             if len(types) > 0:
-                print('\n' + 'Other possible types found! Check seq_typing.report.other_probable_types.tab file.' + '\n')
+                print('\n' +
+                      'Other possible types found for {reference}!\n'
+                      'Check seq_typing.report.other_probable_types.tab file.'.format(reference=reference) +
+                      '\n')
                 for probable_type in types:
                     writer.write('\t'.join(['other_probable_type', reference] + list(map(str, probable_type))) + '\n')
 

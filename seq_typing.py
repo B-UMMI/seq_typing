@@ -74,7 +74,7 @@ def parse_reference(reference, problematic_characters):
                     headers_correspondence[header] = str(original_header)
                     sequence = ''
                 else:
-                    sequence += line.upper()
+                    sequence += line.replace(' ', '').upper()
         if len(sequence) > 0:
             reference_dict[header] = sequence
     return reference_dict, headers_correspondence
