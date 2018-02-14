@@ -95,7 +95,7 @@ def requiredPrograms():
 def general_information(logfile, version, outdir, time_str):
     # Check if output directory exists
 
-    print('\n' + '==========> patho_typing <==========')
+    print('\n' + '==========> seq_typing <==========')
     print('\n' + 'Program start: ' + time.ctime())
 
     # Tells where the logfile will be stored
