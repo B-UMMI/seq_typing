@@ -74,7 +74,7 @@ def parse_reference(reference, problematic_characters):
                     headers_correspondence[header] = str(original_header)
                     sequence = ''
                 else:
-                    sequence += line.upper()
+                    sequence += line.replace(' ', '').upper()
         if len(sequence) > 0:
             reference_dict[header] = sequence
     return reference_dict, headers_correspondence
@@ -158,7 +158,10 @@ def main():
     parser_optional_general.add_argument('--minCovCall', type=int, metavar='N', help='Reference position minimum coverage depth to perform a base call', required=False, default=10)
     parser_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6', help=argparse.SUPPRESS, required=False, default=0.6)
     # parser_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6', help='Minimum relative frequency of the dominant allele coverage depth (value between [0, 1]). Positions with lower values will be considered as having multiple alleles (and will be coded as N)', required=False, default=0.6)
-    parser_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N', help='Minimum percentage of target reference sequence covered to consider a sequence to be present (value between [0, 100])', required=False, default=80)
+    parser_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N',
+                                         help='Minimum percentage of target reference sequence covered to consider a'
+                                              ' sequence to be present (value between [0, 100])',
+                                         required=False, default=60)
     parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS, required=False, default=80)
     # parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help='Minimum percentage of identity of reference sequence covered to consider a gene to be present (value between [0, 100]). One INDEL will be considered as one difference', required=False, default=80)
     parser_optional_general.add_argument('--doNotRemoveConsensus', action='store_true', help='Do not remove ReMatCh consensus sequences')

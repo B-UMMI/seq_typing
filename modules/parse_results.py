@@ -104,22 +104,30 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
         writer.write(seq_type + '\n')
 
     with open(os.path.join(outdir, 'seq_typing.report_types.tab'), 'wt') as writer:
-        header_report_types = False
-        if not header_report_types:
-            writer.write('\t'.join(['#sequence_type', 'reference_file', 'sequence', 'sequenced_covered', 'coverage_depth', 'sequence_identity']) + '\n')
-            header_report_types = True
+        writer.write('\t'.join(['#sequence_type', 'reference_file', 'sequence', 'sequenced_covered', 'coverage_depth',
+                                'sequence_identity']) +
+                     '\n')
 
         print('\n' + 'TYPEABLE REFERENCES')
         for reference, data in seq_type_info.items():
             if len(data) > 0:
-                print('\n' + '\n'.join(['Reference file: {}'.format(reference), 'Sequence: {}'.format(data[0]), 'Sequenced covered: {}'.format(data[1]), 'Coverage depth: {}'.format(data[2]), 'Sequence identity: {}'.format(data[3])]) + '\n')
+                print('\n' +
+                      '\n'.join(['Reference file: {}'.format(reference),
+                                 'Sequence: {}'.format(data[0]),
+                                 'Sequenced covered: {}'.format(data[1]),
+                                 'Coverage depth: {}'.format(data[2]),
+                                 'Sequence identity: {}'.format(data[3])]) +
+                      '\n')
                 writer.write('\t'.join(['selected', reference] + list(map(str, data))) + '\n')
         print('\n' + 'Types found:' + '\n')
         print(seq_type + '\n')
 
         for reference, types in probable_results.items():
             if len(types) > 0:
-                print('\n' + 'Other possible types found! Check seq_typing.report.other_probable_types.tab file.' + '\n')
+                print('\n' +
+                      'Other possible types found for {reference}!\n'
+                      'Check seq_typing.report.other_probable_types.tab file.'.format(reference=reference) +
+                      '\n')
                 for probable_type in types:
                     writer.write('\t'.join(['other_probable_type', reference] + list(map(str, probable_type))) + '\n')
 
@@ -133,8 +141,3 @@ def parse_results(references_results, references_files, references_headers, outd
     seq_type, seq_type_info, probable_results, improbable_results = get_results(references_results, minGeneCoverage, typeSeparator, references_files, references_headers)
     write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results)
     return seq_type, seq_type_info, probable_results, improbable_results
-
-
-# references_headers = {reference_file: {new_header: original_header}}
-
-# references_results = {reference_mapped: {counter: {'header': new_header, 'gene_coverage': 0.0, 'gene_low_coverage': 0, 'gene_number_positions_multiple_alleles': 0, 'gene_mean_read_coverage': 0, 'gene_identity': 0}}}
