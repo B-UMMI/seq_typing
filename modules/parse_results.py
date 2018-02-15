@@ -109,6 +109,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                      '\n')
 
         print('\n' + 'TYPEABLE REFERENCES')
+        typeable_references = False
         for reference, data in seq_type_info.items():
             if len(data) > 0:
                 print('\n' +
@@ -119,6 +120,11 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                                  'Sequence identity: {}'.format(data[3])]) +
                       '\n')
                 writer.write('\t'.join(['selected', reference] + list(map(str, data))) + '\n')
+                typeable_references = True
+
+        if typeable_references is False:
+            print('No references return a type')
+
         print('\n' + 'Types found:' + '\n')
         print(seq_type + '\n')
 

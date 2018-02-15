@@ -265,6 +265,19 @@ def required_length(tuple_length_options, argument_name):
     return RequiredLength
 
 
+def arguments_choices_words(argument_choices, argument_name):
+    class ArgumentsChoicesWords(argparse.Action):
+        def __call__(self, parser, args, values, option_string=None):
+            string_value = ' '.join(values)
+            if string_value not in argument_choices:
+                msg = 'Error: argument {argument_name}: invalid choice: {string_value} (choose from' \
+                      ' {argument_choices})'.format(argument_name=argument_name, string_value=string_value,
+                                                    argument_choices=argument_choices)
+                raise argparse.ArgumentTypeError(msg)
+            setattr(args, self.dest, values)
+    return ArgumentsChoicesWords
+
+
 def get_sequence_information(fasta_file, length_extra_seq):
     sequence_dict = {}
     headers = {}

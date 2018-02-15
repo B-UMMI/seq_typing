@@ -227,8 +227,8 @@ def main():
     parser_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                   help='Name of the species with reference sequences provided together with %(prog)s'
                                        ' for serotyping',
-                                  choices=[('escherichia', 'coli'),
-                                           ('streptococcus', 'agalactiae')])
+                                  action=utils.arguments_choices_words(['escherichia coli', 'streptococcus agalactiae'],
+                                                                       '--species'))
 
     # TODO: remove this
     # parser_required.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'), metavar='/path/to/reference_sequence.fasta', help='Fasta file containing reference sequences. If more than one file is passed, a reference sequence for each file will be determined. Give the files name in the same order that the type must be determined.', required=True)
