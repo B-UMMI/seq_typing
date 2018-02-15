@@ -37,6 +37,73 @@ import modules.parse_results as parse_results
 version = '0.1'
 
 
+def parse_config(config_file):
+    config = {'length_extra_seq': None, 'minimum_depth_presence': None, 'minimum_depth_call': None,
+              'minimum_gene_coverage': None}
+
+    with open(config_file, 'rtU') as reader:
+        field = None
+        for line in reader:
+            line = line.rstrip('\r\n')
+            if len(line) > 0:
+                line = line.split(' ')[0]
+                if line.startswith('#'):
+                    line = line[1:].split(' ')[0]
+                    field = line
+                else:
+                    if field is not None:
+                        if field in ['length_extra_seq', 'minimum_depth_presence', 'minimum_depth_call',
+                                     'minimum_gene_coverage']:
+                            line = int(line)
+                            if field == 'minimum_gene_coverage':
+                                if line < 0 or line > 100:
+                                    sys.exit('minimum_gene_coverage in config file must be an integer between 0 and'
+                                             ' 100')
+                        config[field] = line
+                        field = None
+
+    for field in config:
+        if config[field] is None:
+            sys.exit('{} in config file is missing'.format(field))
+
+    return config
+
+
+def get_fasta_config(species):
+    """
+    Get the reference fasta file and config file for the species provided
+
+    Parameters
+    ----------
+    species : tuple
+        Tuple with two strings that correspond to the species name, e.g. ('escherichia', 'coli')
+
+    Returns
+    -------
+    fasta : list
+        Sorted list of fasta files to be used as references
+    config : str
+        File path to config file
+    """
+
+    fasta = []
+    config = None
+
+    file_path = os.path.abspath(__file__)
+    species_folder = os.path.join(os.path.dirname(file_path), 'serotyping_reference_sequences', '_'.join(species), '')
+
+    files = [f for f in os.listdir(species_folder) if not f.startswith('.') and
+             os.path.isfile(os.path.join(species_folder, f))]
+    for file_found in files:
+        file_found = os.path.join(species_folder, file_found)
+        if file_found.endswith('.fasta'):
+            fasta.append(file_found)
+        elif file_found.endswith('.config'):
+            config = str(file_found)
+
+    return sorted(fasta), config
+
+
 def include_rematch_dependencies_path():
     command = ['which', 'rematch.py']
     run_successfully, stdout, stderr = utils.runCommandPopenCommunicate(command, False, None, False)
@@ -141,12 +208,30 @@ def main():
     if sys.version_info[0] < 3:
         sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
 
-    parser = argparse.ArgumentParser(prog='seq_typing.py', description='Determine which reference sequence is more likely to be present in a given sample', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(prog='seq_typing.py',
+                                     description='Determine which reference sequence is more likely to be present in a'
+                                                 ' given sample',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--version', help='Version information', action='version', version=str('%(prog)s v' + version))
 
     parser_required = parser.add_argument_group('Required options')
     parser_required.add_argument('-f', '--fastq', nargs='+', action=utils.required_length((1, 2), '--fastq'), type=argparse.FileType('r'), metavar=('/path/to/input/file.fq.gz'), help='Path to single OR paired-end fastq files. If two files are passed, they will be assumed as being the paired fastq files', required=True)
-    parser_required.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'), metavar='/path/to/reference_sequence.fasta', help='Fasta file containing reference sequences. If more than one file is passed, a reference sequence for each file will be determined. Give the files name in the same order that the type must be determined.', required=True)
+
+    parser_reference = parser.add_mutually_exclusive_group()
+    parser_reference.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'),
+                                  metavar='/path/to/reference_sequence.fasta',
+                                  help='Fasta file containing reference sequences. If more than one file is passed, a'
+                                       ' reference sequence for each file will be determined. Give the files name in'
+                                       ' the same order that the type must be determined.')
+    # TODO: add ('haemophilus', 'influenzae')
+    parser_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
+                                  help='Name of the species with reference sequences provided together with %(prog)s'
+                                       ' for serotyping',
+                                  choices=[('escherichia', 'coli'),
+                                           ('streptococcus', 'agalactiae')])
+
+    # TODO: remove this
+    # parser_required.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'), metavar='/path/to/reference_sequence.fasta', help='Fasta file containing reference sequences. If more than one file is passed, a reference sequence for each file will be determined. Give the files name in the same order that the type must be determined.', required=True)
 
     parser_optional_general = parser.add_argument_group('General facultative options')
     parser_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/', help='Path to the directory where the information will be stored', required=False, default='.')
@@ -156,14 +241,24 @@ def main():
     parser_optional_general.add_argument('--extraSeq', type=int, metavar='N', help='Sequence length added to both ends of target sequences (usefull to improve reads mapping to the target one) that will be trimmed in ReMatCh outputs', required=False, default=0)
     parser_optional_general.add_argument('--minCovPresence', type=int, metavar='N', help='Reference position minimum coverage depth to consider the position to be present in the sample', required=False, default=5)
     parser_optional_general.add_argument('--minCovCall', type=int, metavar='N', help='Reference position minimum coverage depth to perform a base call', required=False, default=10)
-    parser_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6', help=argparse.SUPPRESS, required=False, default=0.6)
-    # parser_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6', help='Minimum relative frequency of the dominant allele coverage depth (value between [0, 1]). Positions with lower values will be considered as having multiple alleles (and will be coded as N)', required=False, default=0.6)
+    parser_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6',
+                                         help=argparse.SUPPRESS, required=False, default=0.6)
+    # parser_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6',
+    #                                      help='Minimum relative frequency of the dominant allele coverage depth'
+    #                                           ' (value between [0, 1]). Positions with lower values will be'
+    #                                           ' considered as having multiple alleles (and will be coded as N)',
+    #                                      required=False, default=0.6)
     parser_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N',
                                          help='Minimum percentage of target reference sequence covered to consider a'
                                               ' sequence to be present (value between [0, 100])',
                                          required=False, default=60)
-    parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS, required=False, default=80)
-    # parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help='Minimum percentage of identity of reference sequence covered to consider a gene to be present (value between [0, 100]). One INDEL will be considered as one difference', required=False, default=80)
+    parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS,
+                                         required=False, default=80)
+    # parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
+    #                                      help='Minimum percentage of identity of reference sequence covered to'
+    #                                           ' consider a gene to be present (value between [0, 100]). One INDEL'
+    #                                           ' will be considered as one difference',
+    #                                      required=False, default=80)
     parser_optional_general.add_argument('--doNotRemoveConsensus', action='store_true', help='Do not remove ReMatCh consensus sequences')
     parser_optional_general.add_argument('--debug', action='store_true', help='DeBug Mode: do not remove temporary files')
     parser_optional_general.add_argument('--beginning', action='store_true', help='Start %(prog)s from the beggining')
@@ -175,6 +270,8 @@ def main():
         parser.error('--minGeneCoverage should be a value between [0, 100]')
     # if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
     #     parser.error('--minGeneIdentity should be a value between [0, 100]')
+    if args.reference is None and args.species is None:
+        parser.error('--reference or --species must be provided')
 
     start_time = time.time()
 
@@ -192,7 +289,16 @@ def main():
     rematch_script = include_rematch_dependencies_path()
 
     args.fastq = [fastq.name for fastq in args.fastq]
-    args.reference = [reference.name for reference in args.reference]
+
+    if args.reference is not None:
+        args.reference = [reference.name for reference in args.reference]
+    else:
+        args.reference, config = get_fasta_config(args.species)
+        config = parse_config(config)
+        args.extraSeq = config['length_extra_seq']
+        args.minCovPresence = config['minimum_depth_presence']
+        args.minCovCall = config['minimum_depth_call']
+        args.minGeneCoverage = config['minimum_gene_coverage']
 
     folders_2_remove = []
 
