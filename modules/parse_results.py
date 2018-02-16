@@ -60,8 +60,8 @@ def get_results(references_results, minGeneCoverage, typeSeparator, references_f
             for original_reference, headers in references_headers.items():
                 for new_header, original_header in headers.items():
                     if sequence == new_header:
-                        results[original_reference] = original_header.rsplit('_', 1)[1]
-                        results_info[original_reference] = (original_header, references_results[original_reference][new_header]['gene_coverage'], references_results[original_reference][new_header]['gene_mean_read_coverage'], references_results[original_reference][new_header]['gene_identity'])
+                        results[original_reference] = original_header.rsplit(typeSeparator, 1)[1]
+                        results_info[original_reference] = (original_header, references_results[reference][new_header]['gene_coverage'], references_results[reference][new_header]['gene_mean_read_coverage'], references_results[reference][new_header]['gene_identity'])
                     if len(probable_sequences) > 0:
                         if new_header in probable_sequences:
                             probable_results[original_reference].append((original_header, probable_sequences[new_header][0], probable_sequences[new_header][1], probable_sequences[new_header][2]))
@@ -72,10 +72,11 @@ def get_results(references_results, minGeneCoverage, typeSeparator, references_f
                 for original_reference, headers in references_headers.items():
                     for new_header, original_header in headers.items():
                         if improbable_sequences == new_header:
-                            print('\n' + '\n'.join(['NONE TYPEABLE REFERENCE', 'Reference file: {}'.format(reference), 'Most likely sequence: {}'.format(new_header), 'Sequenced covered: {}'.format(references_results[original_reference][new_header]['gene_coverage']), 'Coverage depth: {}'.format(references_results[original_reference][new_header]['gene_mean_read_coverage']), 'Sequence identity: {}'.format(references_results[original_reference][new_header]['gene_identity'])]) + '\n')
-                            improbable_results[original_reference] = (original_header, references_results[original_reference][new_header]['gene_coverage'], references_results[original_reference][new_header]['gene_mean_read_coverage'], references_results[original_reference][new_header]['gene_identity'])
+                            print('\n' + '\n'.join(['NONE TYPEABLE REFERENCE', 'Reference file: {}'.format(original_reference), 'Most likely sequence: {}'.format(original_header), 'Sequenced covered: {}'.format(references_results[reference][new_header]['gene_coverage']), 'Coverage depth: {}'.format(references_results[reference][new_header]['gene_mean_read_coverage']), 'Sequence identity: {}'.format(references_results[reference][new_header]['gene_identity'])]) + '\n')
+                            improbable_results[original_reference] = (original_header, references_results[reference][new_header]['gene_coverage'], references_results[reference][new_header]['gene_mean_read_coverage'], references_results[reference][new_header]['gene_identity'])
 
     return ':'.join([results[reference] for reference in references_files]), results_info, probable_results, improbable_results
+
 
 
 def split_references_results_by_references(references_results, references_headers):
@@ -103,13 +104,27 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
         writer.write(seq_type + '\n')
 
     with open(os.path.join(outdir, 'seq_typing.report_types.tab'), 'wt') as writer:
-        writer.write('\t'.join(['#sequence_type', 'reference_file', 'sequence', 'sequenced_covered', 'coverage_depth', 'sequence_identity']) + '\n')
+        writer.write('\t'.join(['#sequence_type', 'reference_file', 'sequence', 'sequenced_covered', 'coverage_depth',
+                                'sequence_identity']) +
+                     '\n')
 
         print('\n' + 'TYPEABLE REFERENCES')
+        typeable_references = False
         for reference, data in seq_type_info.items():
             if len(data) > 0:
-                print('\n' + '\n'.join(['Reference file: {}'.format(reference), 'Sequence: {}'.format(data[0]), 'Sequenced covered: {}'.format(data[1]), 'Coverage depth: {}'.format(data[2]), 'Sequence identity: {}'.format(data[3])]) + '\n')
+                print('\n' +
+                      '\n'.join(['Reference file: {}'.format(reference),
+                                 'Sequence: {}'.format(data[0]),
+                                 'Sequenced covered: {}'.format(data[1]),
+                                 'Coverage depth: {}'.format(data[2]),
+                                 'Sequence identity: {}'.format(data[3])]) +
+                      '\n')
                 writer.write('\t'.join(['selected', reference] + list(map(str, data))) + '\n')
+                typeable_references = True
+
+        if typeable_references is False:
+            print('No references return a type')
+
         print('\n' + 'Types found:' + '\n')
         print(seq_type + '\n')
 
