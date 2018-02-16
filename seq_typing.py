@@ -75,8 +75,8 @@ def get_fasta_config(species):
 
     Parameters
     ----------
-    species : tuple
-        Tuple with two strings that correspond to the species name, e.g. ('escherichia', 'coli')
+    species : list
+        List with strings that correspond to the species name, e.g. ('escherichia', 'coli')
 
     Returns
     -------
@@ -102,6 +102,23 @@ def get_fasta_config(species):
             config = str(file_found)
 
     return sorted(fasta), config
+
+
+def get_species_allowed():
+    """
+    Get the name of the species with reference sequences provided for serotyping
+
+    Returns
+    -------
+    species : list
+        List with species names, e.g. ['escherichia coli', 'streptococcus agalactiae']
+    """
+
+    file_path = os.path.abspath(__file__)
+    serotyping_folder = os.path.join(os.path.dirname(file_path), 'serotyping_reference_sequences', '')
+    species = [d.replace('_', ' ') for d in os.listdir(serotyping_folder) if not d.startswith('.') and
+               os.path.isdir(os.path.join(serotyping_folder, d))]
+    return species
 
 
 def include_rematch_dependencies_path():
@@ -223,15 +240,10 @@ def main():
                                   help='Fasta file containing reference sequences. If more than one file is passed, a'
                                        ' reference sequence for each file will be determined. Give the files name in'
                                        ' the same order that the type must be determined.')
-    # TODO: add ('haemophilus', 'influenzae')
     parser_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                   help='Name of the species with reference sequences provided together with %(prog)s'
                                        ' for serotyping',
-                                  action=utils.arguments_choices_words(['escherichia coli', 'streptococcus agalactiae'],
-                                                                       '--species'))
-
-    # TODO: remove this
-    # parser_required.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'), metavar='/path/to/reference_sequence.fasta', help='Fasta file containing reference sequences. If more than one file is passed, a reference sequence for each file will be determined. Give the files name in the same order that the type must be determined.', required=True)
+                                  action=utils.arguments_choices_words(get_species_allowed(), '--species'))
 
     parser_optional_general = parser.add_argument_group('General facultative options')
     parser_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/', help='Path to the directory where the information will be stored', required=False, default='.')
@@ -299,6 +311,16 @@ def main():
         args.minCovPresence = config['minimum_depth_presence']
         args.minCovCall = config['minimum_depth_call']
         args.minGeneCoverage = config['minimum_gene_coverage']
+
+        print('\n'
+              'Settings that will be used:\n'
+              '    reference: {reference}\n'
+              '    extraSeq: {extraSeq}\n'
+              '    minCovPresence: {minCovPresence}\n'
+              '    minCovCall: {minCovCall}\n'
+              '    minGeneCoverage: {minGeneCoverage}\n'
+              '\n'.format(reference=args.reference, extraSeq=args.extraSeq, minCovPresence=args.minCovPresence,
+                          minCovCall=args.minCovCall, minGeneCoverage=args.minGeneCoverage))
 
     folders_2_remove = []
 

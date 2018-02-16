@@ -257,23 +257,38 @@ def required_length(tuple_length_options, argument_name):
     class RequiredLength(argparse.Action):
         def __call__(self, parser, args, values, option_string=None):
             if len(values) not in tuple_length_options:
-                msg = 'Option {argument_name} requires one of the following number of arguments:' \
+                msg = 'argument {argument_name} requires one of the following number of arguments:' \
                       ' {tuple_length_options}'.format(argument_name=argument_name,
                                                        tuple_length_options=tuple_length_options)
-                raise argparse.ArgumentTypeError(msg)
+                parser.error(msg)
             setattr(args, self.dest, values)
     return RequiredLength
 
 
 def arguments_choices_words(argument_choices, argument_name):
+    """
+    Check if the words passed using the argument, are between those allowed
+
+    Parameters
+    ----------
+    argument_choices : list
+        List with allowed words, e.g. ['escherichia coli', 'streptococcus agalactiae']
+    argument_name : str
+        Argument name, e.g. '--species'
+
+    Returns
+    -------
+    ArgumentsChoicesWords : list
+        List with strings passed using the argument, e.g. ('escherichia', 'coli')
+    """
     class ArgumentsChoicesWords(argparse.Action):
         def __call__(self, parser, args, values, option_string=None):
             string_value = ' '.join(values)
             if string_value not in argument_choices:
-                msg = 'Error: argument {argument_name}: invalid choice: {string_value} (choose from' \
+                msg = 'argument {argument_name}: invalid choice: {string_value} (choose from' \
                       ' {argument_choices})'.format(argument_name=argument_name, string_value=string_value,
                                                     argument_choices=argument_choices)
-                raise argparse.ArgumentTypeError(msg)
+                parser.error(msg)
             setattr(args, self.dest, values)
     return ArgumentsChoicesWords
 
