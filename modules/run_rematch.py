@@ -55,7 +55,7 @@ def clean_headers_reference_file(reference_file, outdir, extraSeq, rematch_modul
     return new_reference_file, headers, sequences
 
 
-def rematch_for_different_references(fastq, references_files, threads, outdir, extraSeq, minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage, debug, minGeneIdentity, rematch_module, doNotRemoveConsensus, pickles_folder):
+def rematch_for_different_references(fastq, references_files, threads, outdir, extraSeq, minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage, debug, minGeneIdentity, rematch_module, doNotRemoveConsensus):
     references_results = {}
     for x, reference in enumerate(references_files):
         reference_name = os.path.basename(reference) + '_' + str(x)
@@ -70,7 +70,7 @@ def rematch_for_different_references(fastq, references_files, threads, outdir, e
         else:
             sys.exit('Something went wrong while running ReMatCh for reference {reference}'.format(reference=reference))
         clean_rematch_folder(consensus_files, reference_file, ref_dir, doNotRemoveConsensus, debug)
-        if not debug or not doNotRemoveConsensus:
+        if not debug and not doNotRemoveConsensus:
             utils.removeDirectory(ref_dir)
     return references_results
 
@@ -79,7 +79,7 @@ module_timer = functools.partial(utils.timer, name='Module ReMatCh')
 
 
 @module_timer
-def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraSeq, minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage, minGeneIdentity, debug, doNotRemoveConsensus, pickles_folder):
+def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraSeq, minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage, minGeneIdentity, debug, doNotRemoveConsensus):
     module_dir = os.path.join(outdir, 'rematch', '')
     utils.removeDirectory(module_dir)
     os.makedirs(module_dir)
@@ -89,6 +89,6 @@ def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraS
     autotranslate(['rematch_module', 'utils'])
     import rematch_module
 
-    references_results = rematch_for_different_references(fastq, references_files, threads, module_dir, extraSeq, minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage, debug, minGeneIdentity, rematch_module, doNotRemoveConsensus, pickles_folder)
+    references_results = rematch_for_different_references(fastq, references_files, threads, module_dir, extraSeq, minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage, debug, minGeneIdentity, rematch_module, doNotRemoveConsensus)
 
     return references_results, module_dir
