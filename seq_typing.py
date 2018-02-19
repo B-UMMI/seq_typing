@@ -340,7 +340,7 @@ def main():
     # Run ReMatCh
     pickleFile = os.path.join(pickles_folder, 'rematch_module.pkl')
     if not os.path.isfile(pickleFile) or args.beginning:
-        runtime, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, references_files, args.fastq, args.threads, args.extraSeq, args.minCovPresence, args.minCovCall, args.minFrequencyDominantAllele, args.minGeneCoverage, args.minGeneIdentity, args.debug, args.doNotRemoveConsensus, pickles_folder)
+        runtime, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, references_files, args.fastq, args.threads, args.extraSeq, args.minCovPresence, args.minCovCall, args.minFrequencyDominantAllele, args.minGeneCoverage, args.minGeneIdentity, args.debug, args.doNotRemoveConsensus)
         folders_2_remove.append(module_dir)
         utils.saveVariableToPickle([references_results, module_dir], pickleFile)
     else:
