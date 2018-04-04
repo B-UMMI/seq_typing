@@ -2,6 +2,19 @@
 
 Determine which reference sequence is more likely to be present in a given sample
 
+---
+
+* [Rational](#rational)
+* [Requirements](#requirements)
+* [Dependencies](#dependencies)
+  * [Install dependencies](#install-dependencies)
+* [Install seq_typing](#install-seq_typing)
+* [Usage](#usage)
+  * [Species serotyping](#species-serotyping)
+  * [Usage examples](#usage-examples)
+* [Outputs](#outputs)
+* [Contact](#contact)
+
 ## Rational
 
 **seq_typing** is a software to determine a given sample type using a read mapping approach against a set of reference sequences. Sample's reads are mapped to the given reference sequences and, based on the length of the sequence covered and it's depth of coverage, **seq_typing** decides which reference sequence is more likely to be present and returns the type associated with such sequence.
