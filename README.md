@@ -4,7 +4,7 @@ Determine which reference sequence is more likely to be present in a given sampl
 
 ## Rational
 
-
+**seq_typing** is a software to determine a given sample type using a read mapping approach against a set of reference sequences. Sample's reads are mapped to the given reference sequences and, based on the length of the sequence covered and it's depth of coverage, **seq_typing** decides which reference sequence is more likely to be present and returns the type associated with such sequence.
 
 ## Requirements
 
@@ -166,8 +166,14 @@ Tabular file with detailed results:
 * _coverage_depth_: mean reference sequences depth of coverage of the positions present
 * _sequence_identity_: percentage identity of reference sequences covered
 
-Example of _E. coli_ serotyping:  
-`O157:H7`
+Example of _E. coli_ serotyping:
+
+| #sequence_type      | reference_file | sequence              | sequenced_covered | coverage_depth     | sequence_identity |
+|---------------------|----------------|-----------------------|-------------------|--------------------|-------------------|
+| selected            | O_type.fasta   | wzy_192_AF529080_O26  | 100.0             | 281.95405669599216 | 100.0             |
+| selected            | H_type.fasta   | fliC_269_AY337465_H11 | 99.4546693933197  | 51.76490747087046  | 99.86291980808772 |
+| other_probable_type | O_type.fasta   | wzx_208_AF529080_O26  | 100.0             | 223.3072050673001  | 100.0             |
+| other_probable_type | H_type.fasta   | fliC_276_AY337472_H11 | 98.84117246080436 | 37.52551724137931  | 99.86206896551724 |
 
 __run.*.log__  
 Running log file.  
