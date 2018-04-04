@@ -125,12 +125,23 @@ Use `--species` option with one of those species
 
 ### Usage examples
 
-Serotyping _Escherichia coli_ using provided references sequences:
+Serotyping _Haemophilus influenzae_ using provided references sequences (that uses only one reference sequences file):
 ````bash
 # Activate Conda environment (when using Python via Conda)
 source activate seq_typing
 
 seq_typing.py --species Haemophilus influenzae \
+              --fastq sample_1.fq.gz sample_2.fq.gz \
+              --outdir sample_out/ \
+              --threads 2
+````
+
+Serotyping _Escherichia coli_ using provided references sequences (that uses two reference sequences files):
+````bash
+# Activate Conda environment (when using Python via Conda)
+source activate seq_typing
+
+seq_typing.py --species Escherichia coli \
               --fastq sample_1.fq.gz sample_2.fq.gz \
               --outdir sample_out/ \
               --threads 2 \
