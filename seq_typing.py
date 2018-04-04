@@ -127,7 +127,9 @@ def include_rematch_dependencies_path():
     if run_successfully:
         rematch_script = stdout.splitlines()[0]
         utils.setPATHvariable(False, rematch_script)
-    return rematch_script
+        return rematch_script
+    else:
+        sys.exit('ReMatCh not found in the PATH')
 
 
 def clean_header(header, problematic_characters):
@@ -164,17 +166,25 @@ def parse_reference(reference, problematic_characters):
     return reference_dict, headers_correspondence
 
 
-def rename_duplicated_headers(references_headers, reference, reference_dict, headers_correspondence, problematic_characters):
+def rename_duplicated_headers(references_headers, reference, reference_dict, headers_correspondence,
+                              problematic_characters):
     renamed_reference_dict, renamed_headers_correspondence, headers_changed = {}, {}, []
     for ref in references_headers:
         if any(x in references_headers[ref].keys() for x in reference_dict):
             for header in reference_dict:
                 if header in references_headers[ref]:
-                    original_header, new_header = clean_header('_'.join([header, os.path.basename(reference), 'SeqTyping']), problematic_characters)
+                    original_header, new_header = clean_header('_'.join([header,
+                                                                         os.path.basename(reference),
+                                                                         'SeqTyping']),
+                                                               problematic_characters)
                     renamed_reference_dict[new_header] = reference_dict[header]
                     renamed_headers_correspondence[new_header] = headers_correspondence[header]
                     headers_changed.append(header)
-                    utils.Bcolors_print('{header} sequence header from {reference} file was found already in {ref} file. Therefore it was renamed to {new_header}'.format(header=header, reference=os.path.basename(reference), ref=os.path.basename(ref), new_header=new_header), 'WARNING')
+                    utils.Bcolors_print('{header} sequence header from {reference} file was found already'
+                                        ' in {ref} file. Therefore it was renamed'
+                                        ' to {new_header}'.format(header=header, reference=os.path.basename(reference),
+                                                                  ref=os.path.basename(ref),
+                                                                  new_header=new_header), 'WARNING')
     for header in reference_dict:
         if header not in headers_changed:
             renamed_reference_dict[header] = reference_dict[header]
@@ -188,23 +198,25 @@ def write_sequence(reference_dict, writer):
         writer.write('\n'.join(utils.chunkstring(sequence, 80)) + '\n')
 
 
-def prepare_references(references, mapRefTogether, references_dir):
+def prepare_references(references, map_ref_together, references_dir):
     problematic_characters = ["|", " ", ",", ".", "(", ")", "'", "/", ":"]
     references_headers = {}
     references_files = []
 
-    if mapRefTogether:
+    if map_ref_together:
         ref_file = os.path.join(references_dir, 'references_together.fasta')
         writer = open(ref_file, 'wt')
         references_files.append(ref_file)
 
     for reference in references:
         reference_dict, headers_correspondence = parse_reference(reference, problematic_characters)
-        reference_dict, headers_correspondence = rename_duplicated_headers(references_headers, reference, reference_dict, headers_correspondence, problematic_characters)
+        reference_dict, headers_correspondence = rename_duplicated_headers(references_headers, reference,
+                                                                           reference_dict, headers_correspondence,
+                                                                           problematic_characters)
 
         references_headers[reference] = dict(headers_correspondence)
 
-        if not mapRefTogether:
+        if not map_ref_together:
             ref_file = os.path.join(references_dir, os.path.basename(reference))
             writer = open(ref_file, 'wt')
             references_files.append(ref_file)
@@ -212,10 +224,10 @@ def prepare_references(references, mapRefTogether, references_dir):
         write_sequence(reference_dict, writer)
         writer.flush()
 
-        if not mapRefTogether:
+        if not map_ref_together:
             writer.close()
 
-    if mapRefTogether:
+    if map_ref_together:
         writer.close()
 
     return references_files, references_headers
