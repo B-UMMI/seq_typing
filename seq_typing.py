@@ -402,6 +402,10 @@ def main():
                                                help='Minimum percentage of target reference sequence covered to'
                                                     ' consider a sequence to be present (value between [0, 100])',
                                                required=False, default=60)
+    parser_reads_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N',
+                                               help='Minimum depth of coverage of target reference sequence to'
+                                                    ' consider a sequence to be present',
+                                               required=False)
     parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS,
                                                required=False, default=80)
     # parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
@@ -492,7 +496,7 @@ def main():
     if not os.path.isfile(pickle_file) or args.beginning:
         seq_type, seq_type_info, probable_results, improbable_results = \
             parse_results.parse_results(references_results, reference, references_headers, args.outdir,
-                                        args.minGeneCoverage, args.typeSeparator)
+                                        args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
         utils.saveVariableToPickle([seq_type, seq_type_info, probable_results, improbable_results], pickle_file)
     else:
         print('Results parser module already run')
