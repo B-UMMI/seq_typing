@@ -122,7 +122,7 @@ General facultative options:
                         False)
   --debug               DeBug Mode: do not remove temporary files (default:
                         False)
-  --beginning           Start seq_typing.py from the beggining (default:
+  --beginning           Start seq_typing.py from the beginning (default:
                         False)
   --notClean            Do not remove intermediate files (default: False)
 ````

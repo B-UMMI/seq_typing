@@ -9,7 +9,7 @@ in a given sample
 
 Copyright (C) 2017 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: June 26, 2017
+Last modified: May 16, 2018
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,8 +33,10 @@ import sys
 import modules.utils as utils
 import modules.run_rematch as run_rematch
 import modules.parse_results as parse_results
+import modules.run_blast as run_blast
 
-version = '0.1'
+
+version = '1.0'
 
 
 def parse_config(config_file):
@@ -154,8 +156,12 @@ def parse_reference(reference, problematic_characters):
                         reference_dict[header] = sequence
                     original_header, new_header = clean_header(line[1:], problematic_characters)
                     if new_header in headers_correspondence:
-                        sys.exit('Possible conflicting sequence header in {reference} file:'.format(reference=reference) + '\n' +
-                                 '{original_header} header might be the same as {first_header} header after problematic characters ({problematic_characters}) replacement (new header: {new_header})'.format(original_header=original_header, first_header=headers_correspondence[new_header], problematic_characters=problematic_characters, new_header=new_header))
+                        sys.exit('Possible conflicting sequence header in {reference} file:\n'
+                                 '{original_header} header might be the same as {first_header} header after problematic'
+                                 ' characters ({problematic_characters}) replacement (new header: {new_header})'
+                                 ''.format(reference=reference, original_header=original_header,
+                                           first_header=headers_correspondence[new_header],
+                                           problematic_characters=problematic_characters, new_header=new_header))
                     header = str(new_header)
                     headers_correspondence[header] = str(original_header)
                     sequence = ''
@@ -233,84 +239,48 @@ def prepare_references(references, map_ref_together, references_dir):
     return references_files, references_headers
 
 
-def main():
-    if sys.version_info[0] < 3:
-        sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
+def assembly_subcommand(args):
+    if args.type == 'nucl':
+        utils.required_programs({'blastn': ['-version', '>=', '2.6.0']})
+    elif args.type == 'prot':
+        utils.required_programs({'blastp': ['-version', '>=', '2.6.0']})
 
-    parser = argparse.ArgumentParser(prog='seq_typing.py',
-                                     description='Determine which reference sequence is more likely to be present in a'
-                                                 ' given sample',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--version', help='Version information', action='version', version=str('%(prog)s v' + version))
+    folders_2_remove = []
 
-    parser_required = parser.add_argument_group('Required options')
-    parser_required.add_argument('-f', '--fastq', nargs='+', action=utils.required_length((1, 2), '--fastq'), type=argparse.FileType('r'), metavar=('/path/to/input/file.fq.gz'), help='Path to single OR paired-end fastq files. If two files are passed, they will be assumed as being the paired fastq files', required=True)
+    # Check Blast DB
+    db_exists = run_blast.check_db_exists(args.blast.name)
+    if not db_exists:
+        if not os.path.isdir(os.path.join(args.outdir, 'blast_db', '')):
+            os.makedirs(os.path.join(args.outdir, 'blast_db', ''))
+        folders_2_remove.append(os.path.join(args.outdir, 'blast_db', ''))
+        db_exists = run_blast.create_blast_db(args.fasta.name,
+                                              os.path.join(args.outdir,
+                                                           'blast_db',
+                                                           os.path.dirname(args.fasta.name) + '.{}'.format(args.type)),
+                                              args.type)
 
-    parser_reference = parser.add_mutually_exclusive_group()
-    parser_reference.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'),
-                                  metavar='/path/to/reference_sequence.fasta',
-                                  help='Fasta file containing reference sequences. If more than one file is passed, a'
-                                       ' reference sequence for each file will be determined. Give the files name in'
-                                       ' the same order that the type must be determined.')
-    parser_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                  help='Name of the species with reference sequences provided together with %(prog)s'
-                                       ' for serotyping',
-                                  action=utils.arguments_choices_words(get_species_allowed(), '--species'))
+    references_results, reference, references_headers = None, None, None
 
-    parser_optional_general = parser.add_argument_group('General facultative options')
-    parser_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/', help='Path to the directory where the information will be stored', required=False, default='.')
-    parser_optional_general.add_argument('-j', '--threads', type=int, metavar='N', help='Number of threads to use', required=False, default=1)
-    parser_optional_general.add_argument('--mapRefTogether', action='store_true', help='Map the reads against all references together')
-    parser_optional_general.add_argument('--typeSeparator', type=str, metavar='_', help='Last single character separating the general sequence header from the last part containing the type', required=False, default='_')
-    parser_optional_general.add_argument('--extraSeq', type=int, metavar='N', help='Sequence length added to both ends of target sequences (usefull to improve reads mapping to the target one) that will be trimmed in ReMatCh outputs', required=False, default=0)
-    parser_optional_general.add_argument('--minCovPresence', type=int, metavar='N', help='Reference position minimum coverage depth to consider the position to be present in the sample', required=False, default=5)
-    parser_optional_general.add_argument('--minCovCall', type=int, metavar='N', help='Reference position minimum coverage depth to perform a base call', required=False, default=10)
-    parser_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6',
-                                         help=argparse.SUPPRESS, required=False, default=0.6)
-    # parser_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6',
-    #                                      help='Minimum relative frequency of the dominant allele coverage depth'
-    #                                           ' (value between [0, 1]). Positions with lower values will be'
-    #                                           ' considered as having multiple alleles (and will be coded as N)',
-    #                                      required=False, default=0.6)
-    parser_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N',
-                                         help='Minimum percentage of target reference sequence covered to consider a'
-                                              ' sequence to be present (value between [0, 100])',
-                                         required=False, default=60)
-    parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS,
-                                         required=False, default=80)
-    # parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
-    #                                      help='Minimum percentage of identity of reference sequence covered to'
-    #                                           ' consider a gene to be present (value between [0, 100]). One INDEL'
-    #                                           ' will be considered as one difference',
-    #                                      required=False, default=80)
-    parser_optional_general.add_argument('--doNotRemoveConsensus', action='store_true', help='Do not remove ReMatCh consensus sequences')
-    parser_optional_general.add_argument('--debug', action='store_true', help='DeBug Mode: do not remove temporary files')
-    parser_optional_general.add_argument('--beginning', action='store_true', help='Start %(prog)s from the beggining')
-    parser_optional_general.add_argument('--notClean', action='store_true', help='Do not remove intermediate files')
+    return folders_2_remove, references_results, reference, references_headers
 
-    args = parser.parse_args()
 
+def reads_subcommand(args):
+    msg = None
     if args.minGeneCoverage is not None and (args.minGeneCoverage < 0 or args.minGeneCoverage > 100):
-        parser.error('--minGeneCoverage should be a value between [0, 100]')
+        msg = '--minGeneCoverage should be a value between [0, 100]'
+
     # if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
     #     parser.error('--minGeneIdentity should be a value between [0, 100]')
+
     if args.reference is None and args.species is None:
-        parser.error('--reference or --species must be provided')
+        msg = '--reference or --species must be provided'
 
-    start_time = time.time()
-
-    args.outdir = os.path.abspath(args.outdir)
-    if not os.path.isdir(args.outdir):
-        os.makedirs(args.outdir)
-
-    # Start logger
-    logfile, time_str = utils.start_logger(args.outdir)
-
-    script_path = utils.general_information(logfile, version, args.outdir, time_str)
-    del script_path
-    print('\n')
+    if msg is not None:
+        argparse.ArgumentParser.error(msg)
 
     rematch_script = include_rematch_dependencies_path()
+
+    utils.required_programs({'rematch.py': ['--version', '>=', '3.2']})
 
     args.fastq = [fastq.name for fastq in args.fastq]
 
@@ -336,12 +306,6 @@ def main():
 
     folders_2_remove = []
 
-    # Create modules pickles folder
-    pickles_folder = os.path.join(args.outdir, 'pickles', '')
-    if not os.path.isdir(pickles_folder):
-        os.makedirs(pickles_folder)
-    folders_2_remove.append(pickles_folder)
-
     # Prepare references
     references_dir = os.path.join(args.outdir, 'references', '')
     if not os.path.isdir(references_dir):
@@ -349,25 +313,190 @@ def main():
     folders_2_remove.append(references_dir)
     references_files, references_headers = prepare_references(args.reference, args.mapRefTogether, references_dir)
 
+    pickles_folder = os.path.join(args.outdir, 'pickles', '')
+
     # Run ReMatCh
-    pickleFile = os.path.join(pickles_folder, 'rematch_module.pkl')
-    if not os.path.isfile(pickleFile) or args.beginning:
-        runtime, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, references_files, args.fastq, args.threads, args.extraSeq, args.minCovPresence, args.minCovCall, args.minFrequencyDominantAllele, args.minGeneCoverage, args.minGeneIdentity, args.debug, args.doNotRemoveConsensus)
+    pickle_file = os.path.join(pickles_folder, 'rematch_module.pkl')
+    if not os.path.isfile(pickle_file) or args.beginning:
+        runtime, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, references_files,
+                                                                          args.fastq, args.threads, args.extraSeq,
+                                                                          args.minCovPresence, args.minCovCall,
+                                                                          args.minFrequencyDominantAllele,
+                                                                          args.minGeneCoverage, args.minGeneIdentity,
+                                                                          args.debug, args.doNotRemoveConsensus)
         folders_2_remove.append(module_dir)
-        utils.saveVariableToPickle([references_results, module_dir], pickleFile)
+        utils.saveVariableToPickle([references_results, module_dir], pickle_file)
     else:
         print('ReMatCh module already run')
-        references_results, module_dir = utils.extractVariableFromPickle(pickleFile)
+        references_results, module_dir = utils.extractVariableFromPickle(pickle_file)
         folders_2_remove.append(module_dir)
 
-    # Parse ReMatCh results
-    pickleFile = os.path.join(pickles_folder, 'parse_results.pkl')
-    if not os.path.isfile(pickleFile) or args.beginning:
-        seq_type, seq_type_info, probable_results, improbable_results = parse_results.parse_results(references_results, args.reference, references_headers, args.outdir, args.minGeneCoverage, args.typeSeparator)
-        utils.saveVariableToPickle([seq_type, seq_type_info, probable_results, improbable_results], pickleFile)
+    return folders_2_remove, references_results, args.reference, references_headers
+
+
+def main():
+    if sys.version_info[0] < 3:
+        sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
+
+    parser = argparse.ArgumentParser(prog='seq_typing.py',
+                                     description='Determine which reference sequence is more likely to be present in a'
+                                                 ' given sample',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--version', help='Version information', action='version', version=str('%(prog)s v' + version))
+
+    subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands', help='additional help')
+
+    parser_reads = subparsers.add_parser('reads', help='reads --help')
+    parser_assembly = subparsers.add_parser('assembly', help='assembly --help')
+
+    parser_reads_required = parser_reads.add_argument_group('Required options')
+    parser_reads_required.add_argument('-f', '--fastq', nargs='+', action=utils.required_length((1, 2), '--fastq'),
+                                       type=argparse.FileType('r'), metavar='/path/to/input/file.fq.gz',
+                                       help='Path to single OR paired-end fastq files. If two files are passed, they'
+                                            ' will be assumed as being the paired fastq files',
+                                       required=True)
+
+    parser_reads_reference = parser_reads.add_mutually_exclusive_group()
+    parser_reads_reference.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'),
+                                        metavar='/path/to/reference_sequence.fasta',
+                                        help='Fasta file containing reference sequences. If more than one file is'
+                                             ' passed, a reference sequence for each file will be determined. Give the'
+                                             ' files name in the same order that the type must be determined.')
+    parser_reads_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
+                                        help='Name of the species with reference sequences provided together'
+                                             ' with %(prog)s  for serotyping',
+                                        action=utils.arguments_choices_words(get_species_allowed(), '--species'))
+
+    parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
+    parser_reads_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
+                                               help='Path to the directory where the information will be stored',
+                                               required=False, default='.')
+    parser_reads_optional_general.add_argument('-j', '--threads', type=int, metavar='N',
+                                               help='Number of threads to use', required=False, default=1)
+    parser_reads_optional_general.add_argument('--mapRefTogether', action='store_true',
+                                               help='Map the reads against all references together')
+    parser_reads_optional_general.add_argument('--typeSeparator', type=str, metavar='_',
+                                               help='Last single character separating the general sequence header from'
+                                                    ' the last part containing the type',
+                                               required=False, default='_')
+    parser_reads_optional_general.add_argument('--extraSeq', type=int, metavar='N',
+                                               help='Sequence length added to both ends of target sequences (usefull to'
+                                                    ' improve reads mapping to the target one) that will be trimmed in'
+                                                    ' ReMatCh outputs',
+                                               required=False, default=0)
+    parser_reads_optional_general.add_argument('--minCovPresence', type=int, metavar='N',
+                                               help='Reference position minimum coverage depth to consider the position'
+                                                    ' to be present in the sample',
+                                               required=False, default=5)
+    parser_reads_optional_general.add_argument('--minCovCall', type=int, metavar='N',
+                                               help='Reference position minimum coverage depth to perform a base call',
+                                               required=False, default=10)
+    parser_reads_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6',
+                                               help=argparse.SUPPRESS, required=False, default=0.6)
+    # parser_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6',
+    #                                      help='Minimum relative frequency of the dominant allele coverage depth'
+    #                                           ' (value between [0, 1]). Positions with lower values will be'
+    #                                           ' considered as having multiple alleles (and will be coded as N)',
+    #                                      required=False, default=0.6)
+    parser_reads_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N',
+                                               help='Minimum percentage of target reference sequence covered to'
+                                                    ' consider a sequence to be present (value between [0, 100])',
+                                               required=False, default=60)
+    parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS,
+                                               required=False, default=80)
+    # parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
+    #                                      help='Minimum percentage of identity of reference sequence covered to'
+    #                                           ' consider a gene to be present (value between [0, 100]). One INDEL'
+    #                                           ' will be considered as one difference',
+    #                                      required=False, default=80)
+    parser_reads_optional_general.add_argument('--doNotRemoveConsensus', action='store_true',
+                                               help='Do not remove ReMatCh consensus sequences')
+    parser_reads_optional_general.add_argument('--debug', action='store_true',
+                                               help='DeBug Mode: do not remove temporary files')
+    parser_reads_optional_general.add_argument('--beginning', action='store_true',
+                                               help='Start %(prog)s from the beginning')
+    parser_reads_optional_general.add_argument('--notClean', action='store_true',
+                                               help='Do not remove intermediate files')
+
+    parser_assembly_required = parser_assembly.add_argument_group('Required options')
+    parser_assembly_required.add_argument('-f', '--fasta', nargs=1, type=argparse.FileType('r'),
+                                          metavar='/path/to/query/assembly_file.fasta',
+                                          help='Path to fasta file containing the query sequences from which the'
+                                               ' types should be assessed',
+                                          required=True)
+    parser_assembly_required.add_argument('-b', '--blast', nargs=1, type=argparse.FileType('r'),
+                                          metavar='/path/to/blast_db.sequences.fasta',
+                                          help='Path to Blast DB files. Only provide the one that do not end'
+                                               ' with ".n*" something (do not use for'
+                                               ' example /blast_db.sequences.fasta.nhr)',
+                                          required=True)
+    parser_assembly_required.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
+                                          help='Blast DB type (available options: %(choices)s)', required=True)
+
+    parser_assembly_optional_general = parser_assembly.add_argument_group('General facultative options')
+    parser_assembly_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
+                                                  help='Path to the directory where the information will be stored',
+                                                  required=False, default='.')
+    parser_assembly_optional_general.add_argument('-j', '--threads', type=int, metavar='N',
+                                                  help='Number of threads to use', required=False, default=1)
+    parser_assembly_optional_general.add_argument('--typeSeparator', type=str, metavar='_',
+                                                  help='Last single character separating the general sequence header'
+                                                       ' from the last part containing the type',
+                                                  required=False, default='_')
+    parser_assembly_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N',
+                                                  help='Minimum percentage of target reference sequence covered to'
+                                                       ' consider a sequence to be present (value between [0, 100])',
+                                                  required=False, default=60)
+    parser_assembly_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
+                                                  help='Minimum percentage of identity of reference sequence covered'
+                                                       ' to consider a gene to be present (value between [0, 100])',
+                                                  required=False, default=80)
+    parser_assembly_optional_general.add_argument('--debug', action='store_true',
+                                                  help='DeBug Mode: do not remove temporary files')
+    parser_assembly_optional_general.add_argument('--beginning', action='store_true',
+                                                  help='Start %(prog)s from the beginning')
+    parser_assembly_optional_general.add_argument('--notClean', action='store_true',
+                                                  help='Do not remove intermediate files')
+
+    parser_reads.set_defaults(func=reads_subcommand)
+    parser_assembly.set_defaults(func=assembly_subcommand)
+
+    args = parser.parse_args()
+
+    start_time = time.time()
+
+    args.outdir = os.path.abspath(args.outdir)
+    if not os.path.isdir(args.outdir):
+        os.makedirs(args.outdir)
+
+    # Start logger
+    logfile, time_str = utils.start_logger(args.outdir)
+
+    script_path = utils.general_information(logfile, version, args.outdir, time_str)
+    del script_path
+    print('\n')
+
+    folders_2_remove = []
+
+    # Create modules pickles folder
+    pickles_folder = os.path.join(args.outdir, 'pickles', '')
+    if not os.path.isdir(pickles_folder):
+        os.makedirs(pickles_folder)
+    folders_2_remove.append(pickles_folder)
+
+    folders_2_remove_func, references_results, reference, references_headers = args.func(args)
+    folders_2_remove.extend(folders_2_remove_func)
+
+    # Parse results
+    pickle_file = os.path.join(pickles_folder, 'parse_results.pkl')
+    if not os.path.isfile(pickle_file) or args.beginning:
+        seq_type, seq_type_info, probable_results, improbable_results = \
+            parse_results.parse_results(references_results, reference, references_headers, args.outdir,
+                                        args.minGeneCoverage, args.typeSeparator)
+        utils.saveVariableToPickle([seq_type, seq_type_info, probable_results, improbable_results], pickle_file)
     else:
         print('Results parser module already run')
-        seq_type, seq_type_info, probable_results, improbable_results = utils.extractVariableFromPickle(pickleFile)
+        seq_type, seq_type_info, probable_results, improbable_results = utils.extractVariableFromPickle(pickle_file)
         parse_results.write_reports(args.outdir, seq_type, seq_type_info, probable_results, improbable_results)
 
     if not args.notClean and not args.debug:
@@ -375,7 +504,7 @@ def main():
             utils.removeDirectory(folder)
 
     time_taken = utils.runTime(start_time)
-    del(time_taken)
+    del time_taken
 
 
 if __name__ == "__main__":

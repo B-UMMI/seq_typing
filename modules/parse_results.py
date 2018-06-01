@@ -3,21 +3,27 @@ import os.path
 import modules.utils as utils
 
 
-def get_best_sequence(data_by_gene, minGeneCoverage):
+def get_best_sequence(data_by_gene, min_gene_coverage):
     sequence = {}
     probable_sequences = {}
     improbable_sequences = {}
 
     for gene, rematch_results in data_by_gene.items():
-        if rematch_results['gene_coverage'] >= minGeneCoverage:
+        if rematch_results['gene_coverage'] >= min_gene_coverage:
             if rematch_results['gene_coverage'] not in sequence:
                 sequence[rematch_results['gene_coverage']] = gene
             else:
-                if data_by_gene[sequence[rematch_results['gene_coverage']]]['gene_mean_read_coverage'] < rematch_results['gene_mean_read_coverage']:
-                    probable_sequences[sequence[rematch_results['gene_coverage']]] = (rematch_results['gene_coverage'], data_by_gene[sequence[rematch_results['gene_coverage']]]['gene_mean_read_coverage'], data_by_gene[sequence[rematch_results['gene_coverage']]]['gene_identity'])
+                if data_by_gene[sequence[rematch_results['gene_coverage']]]['gene_mean_read_coverage'] < \
+                        rematch_results['gene_mean_read_coverage']:
+                    probable_sequences[sequence[rematch_results['gene_coverage']]] = \
+                        (rematch_results['gene_coverage'],
+                         data_by_gene[sequence[rematch_results['gene_coverage']]]['gene_mean_read_coverage'],
+                         data_by_gene[sequence[rematch_results['gene_coverage']]]['gene_identity'])
                     sequence[rematch_results['gene_coverage']] = gene
                 else:
-                    probable_sequences[gene] = (rematch_results['gene_coverage'], rematch_results['gene_mean_read_coverage'], rematch_results['gene_identity'])
+                    probable_sequences[gene] = (rematch_results['gene_coverage'],
+                                                rematch_results['gene_mean_read_coverage'],
+                                                rematch_results['gene_identity'])
         else:
             improbable_sequences[rematch_results['gene_coverage']] = gene
 
@@ -27,7 +33,9 @@ def get_best_sequence(data_by_gene, minGeneCoverage):
         sequence = None
     else:
         for gene in [sequence[i] for i in sorted(sequence.keys(), reverse=True)[1:]]:
-            probable_sequences[gene] = (data_by_gene[gene]['gene_coverage'], data_by_gene[gene]['gene_mean_read_coverage'], data_by_gene[gene]['gene_identity'])
+            probable_sequences[gene] = (data_by_gene[gene]['gene_coverage'],
+                                        data_by_gene[gene]['gene_mean_read_coverage'],
+                                        data_by_gene[gene]['gene_identity'])
         sequence = sequence[sorted(sequence.keys(), reverse=True)[0]]
 
     if len(improbable_sequences) > 0:
@@ -35,13 +43,13 @@ def get_best_sequence(data_by_gene, minGeneCoverage):
     else:
         improbable_sequences = None
 
-    return (sequence, probable_sequences, improbable_sequences)
+    return sequence, probable_sequences, improbable_sequences
 
 
-def get_results(references_results, minGeneCoverage, typeSeparator, references_files, references_headers):
+def get_results(references_results, min_gene_coverage, type_separator, references_files, references_headers):
     intermediate_results = {}
     for reference, data_by_gene in references_results.items():
-        intermediate_results[reference] = get_best_sequence(data_by_gene, minGeneCoverage)
+        intermediate_results[reference] = get_best_sequence(data_by_gene, min_gene_coverage)
 
     results = {}
     results_info = {}
@@ -60,23 +68,44 @@ def get_results(references_results, minGeneCoverage, typeSeparator, references_f
             for original_reference, headers in references_headers.items():
                 for new_header, original_header in headers.items():
                     if sequence == new_header:
-                        results[original_reference] = original_header.rsplit(typeSeparator, 1)[1]
-                        results_info[original_reference] = (original_header, references_results[reference][new_header]['gene_coverage'], references_results[reference][new_header]['gene_mean_read_coverage'], references_results[reference][new_header]['gene_identity'])
+                        results[original_reference] = original_header.rsplit(type_separator, 1)[1]
+                        results_info[original_reference] = \
+                            (original_header,
+                             references_results[reference][new_header]['gene_coverage'],
+                             references_results[reference][new_header]['gene_mean_read_coverage'],
+                             references_results[reference][new_header]['gene_identity'])
                     if len(probable_sequences) > 0:
                         if new_header in probable_sequences:
-                            probable_results[original_reference].append((original_header, probable_sequences[new_header][0], probable_sequences[new_header][1], probable_sequences[new_header][2]))
-                    if sequence == new_header and (len(probable_sequences) == 0 or len(probable_results[original_reference]) == len(probable_sequences)):
+                            probable_results[original_reference].append((original_header,
+                                                                         probable_sequences[new_header][0],
+                                                                         probable_sequences[new_header][1],
+                                                                         probable_sequences[new_header][2]))
+                    if sequence == new_header and \
+                            (len(probable_sequences) == 0 or
+                             len(probable_results[original_reference]) == len(probable_sequences)):
                         break
         else:
             if improbable_sequences is not None:
                 for original_reference, headers in references_headers.items():
                     for new_header, original_header in headers.items():
                         if improbable_sequences == new_header:
-                            print('\n' + '\n'.join(['NONE TYPEABLE REFERENCE', 'Reference file: {}'.format(original_reference), 'Most likely sequence: {}'.format(original_header), 'Sequenced covered: {}'.format(references_results[reference][new_header]['gene_coverage']), 'Coverage depth: {}'.format(references_results[reference][new_header]['gene_mean_read_coverage']), 'Sequence identity: {}'.format(references_results[reference][new_header]['gene_identity'])]) + '\n')
-                            improbable_results[original_reference] = (original_header, references_results[reference][new_header]['gene_coverage'], references_results[reference][new_header]['gene_mean_read_coverage'], references_results[reference][new_header]['gene_identity'])
+                            print('\n' +
+                                  '\n'.join(['NONE TYPEABLE REFERENCE',
+                                             'Reference file: {}'.format(original_reference),
+                                             'Most likely sequence: {}'.format(original_header),
+                                             'Sequenced covered: {}'.format(
+                                                 references_results[reference][new_header]['gene_coverage']),
+                                             'Coverage depth: {}'.format(
+                                                 references_results[reference][new_header]['gene_mean_read_coverage']),
+                                             'Sequence identity: {}'.format(
+                                                 references_results[reference][new_header]['gene_identity'])]) +
+                                  '\n')
+                            improbable_results[original_reference] = (original_header,
+                                                                      references_results[reference][new_header]['gene_coverage'],
+                                                                      references_results[reference][new_header]['gene_mean_read_coverage'],
+                                                                      references_results[reference][new_header]['gene_identity'])
 
     return ':'.join([results[reference] for reference in references_files]), results_info, probable_results, improbable_results
-
 
 
 def split_references_results_by_references(references_results, references_headers):
@@ -142,8 +171,10 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                 writer.write('\t'.join(['most_likely', reference] + list(map(str, data))) + '\n')
 
 
-def parse_results(references_results, references_files, references_headers, outdir, minGeneCoverage, typeSeparator):
+def parse_results(references_results, references_files, references_headers, outdir, min_gene_coverage, type_separator):
     references_results = split_references_results_by_references(references_results, references_headers)
-    seq_type, seq_type_info, probable_results, improbable_results = get_results(references_results, minGeneCoverage, typeSeparator, references_files, references_headers)
+    seq_type, seq_type_info, probable_results, improbable_results = get_results(references_results, min_gene_coverage,
+                                                                                type_separator, references_files,
+                                                                                references_headers)
     write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results)
     return seq_type, seq_type_info, probable_results, improbable_results

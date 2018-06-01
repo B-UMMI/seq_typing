@@ -88,12 +88,10 @@ def checkPrograms(programs_version_dictionary):
     return listMissings
 
 
-def requiredPrograms():
-    programs_version_dictionary = {}
-    programs_version_dictionary['rematch.py'] = ['--version', '>=', '3.2']
-    missingPrograms = checkPrograms(programs_version_dictionary)
-    if len(missingPrograms) > 0:
-        sys.exit('\n' + 'Errors:' + '\n' + '\n'.join(missingPrograms))
+def required_programs(programs_version_dictionary):
+    missing_programs = checkPrograms(programs_version_dictionary)
+    if len(missing_programs) > 0:
+        sys.exit('\n' + 'Errors:' + '\n' + '\n'.join(missing_programs))
 
 
 def general_information(logfile, version, outdir, time_str):
@@ -119,9 +117,6 @@ def general_information(logfile, version, outdir, time_str):
     # Print program version
     print('\n' + 'VERSION:')
     scriptVersionGit(version, present_directory, script_path)
-
-    # Check programms
-    requiredPrograms()
 
     return script_path
 
