@@ -247,17 +247,36 @@ def assembly_subcommand(args):
 
     folders_2_remove = []
 
+    # Assuming only one file
+    args.blast = args.blast[0]
+    args.fasta = args.fasta[0]
+
     # Check Blast DB
     db_exists = run_blast.check_db_exists(args.blast.name)
     if not db_exists:
         if not os.path.isdir(os.path.join(args.outdir, 'blast_db', '')):
             os.makedirs(os.path.join(args.outdir, 'blast_db', ''))
-        folders_2_remove.append(os.path.join(args.outdir, 'blast_db', ''))
-        db_exists = run_blast.create_blast_db(args.fasta.name,
+        if not args.keepBlastDB:
+            folders_2_remove.append(os.path.join(args.outdir, 'blast_db', ''))
+        db_exists = run_blast.create_blast_db(args.blast.name,
                                               os.path.join(args.outdir,
                                                            'blast_db',
-                                                           os.path.dirname(args.fasta.name) + '.{}'.format(args.type)),
+                                                           '{blast_DB}.{db_type}'.format(blast_DB=os.path.basename(args.blast.name),
+                                                                                         db_type=args.type)),
                                               args.type)
+
+    if db_exists:
+        if not os.path.isdir(os.path.join(args.outdir, 'blast_out', '')):
+            os.makedirs(os.path.join(args.outdir, 'blast_out', ''))
+        run_successfully = run_blast.run_blast_command(args.fasta.name,
+                                                       os.path.join(args.outdir,
+                                                                    'blast_db',
+                                                                    '{blast_DB}.{db_type}'.format(blast_DB=os.path.basename(args.blast.name),
+                                                                                                  db_type=args.type)),
+                                                       args.type,
+                                                       os.path.join(args.outdir, 'blast_out', 'results.tab'))
+
+        exit('So far, so good')
 
     references_results, reference, references_headers = None, None, None
 
@@ -429,10 +448,11 @@ def main():
                                                ' types should be assessed',
                                           required=True)
     parser_assembly_required.add_argument('-b', '--blast', nargs=1, type=argparse.FileType('r'),
-                                          metavar='/path/to/blast_db.sequences.fasta',
-                                          help='Path to Blast DB files. Only provide the one that do not end'
-                                               ' with ".n*" something (do not use for'
-                                               ' example /blast_db.sequences.fasta.nhr)',
+                                          metavar='/path/to/db.sequences.fasta',
+                                          help='Path to DB sequence file. If Blast DB was already produced only provide'
+                                               ' the one that do not end with ".n*" something (do not use for'
+                                               ' example /blast_db.sequences.fasta.nhr). If no Blast DB was found for'
+                                               ' the DB sequence file, one will be created.',
                                           required=True)
     parser_assembly_required.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
                                           help='Blast DB type (available options: %(choices)s)', required=True)
@@ -461,6 +481,8 @@ def main():
                                                   help='Start %(prog)s from the beginning')
     parser_assembly_optional_general.add_argument('--notClean', action='store_true',
                                                   help='Do not remove intermediate files')
+    parser_assembly_optional_general.add_argument('--keepBlastDB', action='store_true',
+                                                  help='Do not remove the Blast DB produced.')
 
     parser_reads.set_defaults(func=reads_subcommand)
     parser_assembly.set_defaults(func=assembly_subcommand)

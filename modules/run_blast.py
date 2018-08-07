@@ -48,6 +48,8 @@ def create_blast_db(db_sequences, db_output, db_type):
         Tells if the Blast DB was successfully created
     """
 
+    run_successfully = False
+
     # Check Blast DB type
     if db_type not in ('nucl', 'prot'):
         exit('Wrong Blast DB type provided ({db_type}). Use one of the following: nucl, prot'.format(db_type=db_type))
@@ -57,12 +59,14 @@ def create_blast_db(db_sequences, db_output, db_type):
         os.makedirs(os.path.dirname(db_output))
     else:
         if check_db_exists(db_output):
-            exit('Blast DB already found at {dirname} for'
-                 ' {basename}: {file_found}'.format(dirname=os.path.dirname(db_output),
-                                                    basename=os.path.basename(db_output), file_found=file_found))
-
-    run_successfully, _, _ = RUN_subprocess(['makeblastdb', '-parse_seqids', '-dbtype', db_type, '-in', db_sequences,
-                                             '-out', db_output], False, None, True)
+            print('Blast DB already found at {db_output}'
+                  ' for {db_sequences}'.format(db_output=os.path.dirname(db_output),
+                                               db_sequences=db_sequences,
+                                               file_found=os.path.basename(db_sequences)))
+            run_successfully = True
+        else:
+            run_successfully, _, _ = RUN_subprocess(['makeblastdb', '-parse_seqids', '-dbtype', db_type, '-in',
+                                                     db_sequences, '-out', db_output], False, None, True)
 
     return run_successfully
 
