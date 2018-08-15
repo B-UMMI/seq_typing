@@ -1,4 +1,5 @@
 import os.path
+import sys
 from modules.utils import runCommandPopenCommunicate as RUN_subprocess
 
 
@@ -116,6 +117,147 @@ def run_blast_command(query_file, blast_db, db_type, blast_output, threads=1):
     run_successfully, _, _ = RUN_subprocess(command, False, None, True)
 
     return run_successfully
+
+
+def parse_blast_output(blast_output):
+    """
+    Parse Blast output
+
+    Parameters
+    ----------
+    blast_output : str
+        Path to Blast output tabular file
+
+    Returns
+    -------
+    run_successfully : bool
+        Tells if the parser worked
+    """
+
+    # TODO: update Retuns
+
+    # Blast fields
+    # 'query_id', 'query_length', 'subject_id', 'subject_length', 'q_start', 'q_end', 's_start', 's_end', 'evalue',
+    # 'alignment_length', 'percentage_identity', 'identical', 'mismatches', 'gaps'
+
+    output_blast_by_query = {}
+    output_blast_by_subject = {}
+    # To make it compatible with ReMatCh results
+    subject_index_by_query = {}
+    subject_index_by_subject = {}
+
+    # TODO: Simplify the code for output_blast and subject_index using functions
+    # TODO: maybe keep only the by_subject (think on how will it compromise the other_possible_types (for example)
+    # TODO: make verification if output_blast contains only one sequence and if so discard by_subject
+    # TODO: if is to keep by_subject do extra clean to only keep the best query (contig) result and reformat the output
+
+    # Read Blast output
+    with open(blast_output, 'rt') as reader:
+        for line in reader:
+            line = line.rstrip('\r\n')
+            if len(line) > 0:
+                if not line.startswith('#'):
+                    line = line.split('\t')
+
+                    # By subject
+                    if line[2] not in output_blast_by_subject:
+                        output_blast_by_subject[line[2]] = {}
+                        subject_index_by_subject[line[2]] = {}
+
+                    counter = len(subject_index_by_subject[line[2]]) + 1
+                    if line[0] not in subject_index_by_subject[line[2]]:
+                        output_blast_by_subject[line[2]][counter] = {'header': line[2], 'gene_coverage': int(line[9]),
+                                                                     'gene_low_coverage': 0,
+                                                                     'gene_number_positions_multiple_alleles': 0,
+                                                                     'gene_mean_read_coverage': 1,
+                                                                     'gene_identity': float(line[10]),
+                                                                     'q_start': int(line[4]),
+                                                                     'q_end': int(line[5]), 's_start': int(line[6]),
+                                                                     's_end': int(line[7]), 'evalue': float(line[8]),
+                                                                     'gaps': int(line[13]), 'query': line[0]}
+                        subject_index_by_subject[line[2]][line[0]] = counter
+                    else:
+                        previous_blast_results = \
+                            output_blast_by_subject[line[2]][subject_index_by_subject[line[2]][line[0]]]
+                        present_blast_results = {'header': line[2], 'gene_coverage': int(line[9]),
+                                                 'gene_low_coverage': 0, 'gene_number_positions_multiple_alleles': 0,
+                                                 'gene_mean_read_coverage': 1, 'gene_identity': float(line[10]),
+                                                 'q_start': int(line[4]), 'q_end': int(line[5]),
+                                                 's_start': int(line[6]), 's_end': int(line[7]),
+                                                 'evalue': float(line[8]),
+                                                 'gaps': int(line[13]), 'query': line[0]}
+
+                        to_change = False
+                        if previous_blast_results['gene_coverage'] < int(line[9]):
+                            to_change = True
+                        elif previous_blast_results['gene_coverage'] == int(line[9]) and \
+                                previous_blast_results['gene_identity'] <= int(line[10]):
+                            if previous_blast_results['gene_identity'] < int(line[10]):
+                                to_change = True
+                            elif previous_blast_results['gene_identity'] == int(line[10]) and \
+                                    previous_blast_results['evalue'] >= int(line[8]):
+                                if previous_blast_results['evalue'] > int(line[8]):
+                                    to_change = True
+                                elif previous_blast_results['evalue'] == int(line[8]) and \
+                                        previous_blast_results['gaps'] > int(line[13]):
+                                    to_change = True
+
+                        if to_change:
+                            output_blast_by_subject[line[2]][
+                                subject_index_by_subject[line[2]][line[0]]] = present_blast_results
+
+                    # By query
+                    if line[0] not in output_blast_by_query:
+                        output_blast_by_query[line[0]] = {}
+                        subject_index_by_query[line[0]] = {}
+
+                    counter = len(subject_index_by_query[line[0]]) + 1
+                    if line[2] not in subject_index_by_query[line[0]]:
+                        output_blast_by_query[line[0]][counter] = {'header': line[2], 'gene_coverage': int(line[9]),
+                                                                   'gene_low_coverage': 0,
+                                                                   'gene_number_positions_multiple_alleles': 0,
+                                                                   'gene_mean_read_coverage': 1,
+                                                                   'gene_identity': float(line[10]),
+                                                                   'q_start': int(line[4]),
+                                                                   'q_end': int(line[5]), 's_start': int(line[6]),
+                                                                   's_end': int(line[7]), 'evalue': float(line[8]),
+                                                                   'gaps': int(line[13]), 'query': line[0]}
+                        subject_index_by_query[line[0]][line[2]] = counter
+                    else:
+                        previous_blast_results = \
+                            output_blast_by_query[line[0]][subject_index_by_query[line[0]][line[2]]]
+                        present_blast_results = {'header': line[2], 'gene_coverage': int(line[9]),
+                                                 'gene_low_coverage': 0, 'gene_number_positions_multiple_alleles': 0,
+                                                 'gene_mean_read_coverage': 1, 'gene_identity': float(line[10]),
+                                                 'q_start': int(line[4]), 'q_end': int(line[5]),
+                                                 's_start': int(line[6]), 's_end': int(line[7]),
+                                                 'evalue': float(line[8]),
+                                                 'gaps': int(line[13]), 'query': line[0]}
+
+                        to_change = False
+                        if previous_blast_results['gene_coverage'] < int(line[9]):
+                            to_change = True
+                        elif previous_blast_results['gene_coverage'] == int(line[9]) and \
+                                previous_blast_results['gene_identity'] <= int(line[10]):
+                            if previous_blast_results['gene_identity'] < int(line[10]):
+                                to_change = True
+                            elif previous_blast_results['gene_identity'] == int(line[10]) and \
+                                    previous_blast_results['evalue'] >= int(line[8]):
+                                if previous_blast_results['evalue'] > int(line[8]):
+                                    to_change = True
+                                elif previous_blast_results['evalue'] == int(line[8]) and \
+                                        previous_blast_results['gaps'] > int(line[13]):
+                                    to_change = True
+
+                        if to_change:
+                            output_blast_by_query[line[0]][
+                                subject_index_by_query[line[0]][line[2]]] = present_blast_results
+
+    print('output_blast', output_blast_by_subject)
+    print('sequences_db_index', subject_index_by_subject)
+    sys.exit('parse_blast_output')
+
+    # return None
 
 
 def run_blast(fasta_file, db_path, threads, outdir):

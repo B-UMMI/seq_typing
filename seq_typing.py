@@ -245,42 +245,68 @@ def assembly_subcommand(args):
     elif args.type == 'prot':
         utils.required_programs({'blastp': ['-version', '>=', '2.6.0']})
 
+    # For only one file
+    args.blast = os.path.abspath(args.blast[0])
+    args.fasta = os.path.abspath(args.fasta[0].name)
+
     folders_2_remove = []
 
-    # Assuming only one file
-    args.blast = args.blast[0]
-    args.fasta = args.fasta[0]
-
     # Check Blast DB
-    db_exists = run_blast.check_db_exists(args.blast.name)
+    db_exists = run_blast.check_db_exists(args.blast)
     if not db_exists:
-        if not os.path.isdir(os.path.join(args.outdir, 'blast_db', '')):
-            os.makedirs(os.path.join(args.outdir, 'blast_db', ''))
-        if not args.keepBlastDB:
-            folders_2_remove.append(os.path.join(args.outdir, 'blast_db', ''))
-        db_exists = run_blast.create_blast_db(args.blast.name,
-                                              os.path.join(args.outdir,
-                                                           'blast_db',
-                                                           '{blast_DB}.{db_type}'.format(blast_DB=os.path.basename(args.blast.name),
-                                                                                         db_type=args.type)),
-                                              args.type)
+        blast_db = os.path.join(args.outdir, 'blast_db', '{blast_DB}.{db_type}'.format(
+            blast_DB=os.path.basename(args.blast), db_type=args.type))
+        folders_2_remove.append(os.path.dirname(blast_db))
+
+        if not os.path.isdir(os.path.dirname(blast_db)):
+            os.makedirs(os.path.dirname(blast_db))
+
+        db_exists = run_blast.create_blast_db(args.blast, blast_db, args.type)
+        args.blast = str(blast_db)
 
     if db_exists:
-        if not os.path.isdir(os.path.join(args.outdir, 'blast_out', '')):
-            os.makedirs(os.path.join(args.outdir, 'blast_out', ''))
-        run_successfully = run_blast.run_blast_command(args.fasta.name,
-                                                       os.path.join(args.outdir,
-                                                                    'blast_db',
-                                                                    '{blast_DB}.{db_type}'.format(blast_DB=os.path.basename(args.blast.name),
-                                                                                                  db_type=args.type)),
-                                                       args.type,
-                                                       os.path.join(args.outdir, 'blast_out', 'results.tab'))
+        blast_output = os.path.join(args.outdir, 'blast_out', 'results.tab')
+        if not os.path.isdir(os.path.dirname(blast_output)):
+            os.makedirs(os.path.dirname(blast_output))
+        run_successfully = run_blast.run_blast_command(args.fasta, args.blast, args.type, blast_output)
 
-        exit('So far, so good')
+        if run_successfully:
+            _ = run_blast.parse_blast_output(blast_output)
+        exit('assembly_subcommand')
+    else:
+        sys.exit('It was not found any Blast DB')
 
+    # TODO: continue this part
     references_results, reference, references_headers = None, None, None
 
     return folders_2_remove, references_results, reference, references_headers
+
+
+def blast_subcommand(args):
+    if args.type == 'nucl':
+        utils.required_programs({'blastn': ['-version', '>=', '2.6.0']})
+    elif args.type == 'prot':
+        utils.required_programs({'blastp': ['-version', '>=', '2.6.0']})
+
+    args.fasta = os.path.abspath(args.fasta.name)
+
+    utils.removeDirectory(os.path.join(args.outdir, 'pickles', ''))
+
+    # Create DB
+    blast_db = os.path.join(args.outdir, '{blast_DB}.{db_type}'.format(
+        blast_DB=os.path.basename(args.fasta), db_type=args.type))
+    db_exists = run_blast.check_db_exists(blast_db)
+    if not db_exists:
+        db_exists = run_blast.create_blast_db(args.fasta, blast_db, args.type)
+        if db_exists:
+            print('Blast DB created for {file} in {outdir}'.format(file=args.fasta, outdir=args.outdir))
+            sys.exit(0)
+        else:
+            sys.exit('It was not possible to create Blast DB or {}'.format(args.fasta))
+    else:
+        sys.exit('Blast DB already found for {file} in {outdir} as {blast_db}'.format(file=args.fasta,
+                                                                                      outdir=args.outdir,
+                                                                                      blast_db=blast_db))
 
 
 def reads_subcommand(args):
@@ -365,8 +391,13 @@ def main():
 
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands', help='additional help')
 
-    parser_reads = subparsers.add_parser('reads', help='reads --help')
-    parser_assembly = subparsers.add_parser('assembly', help='assembly --help')
+    parser_reads = subparsers.add_parser('reads', description='Run seq_typing.py using fastq files',
+                                         help='reads --help')
+    parser_assembly = subparsers.add_parser('assembly', description='Run seq_typing.py using a fasta file',
+                                            help='assembly --help')
+    parser_blast = subparsers.add_parser('blast', description='Creates Blast DB. This is useful when running the same'
+                                                              ' DB sequence file for different samples.',
+                                         help='assembly --help')
 
     parser_reads_required = parser_reads.add_argument_group('Required options')
     parser_reads_required.add_argument('-f', '--fastq', nargs='+', action=utils.required_length((1, 2), '--fastq'),
@@ -447,12 +478,12 @@ def main():
                                           help='Path to fasta file containing the query sequences from which the'
                                                ' types should be assessed',
                                           required=True)
-    parser_assembly_required.add_argument('-b', '--blast', nargs=1, type=argparse.FileType('r'),
-                                          metavar='/path/to/db.sequences.fasta',
+    parser_assembly_required.add_argument('-b', '--blast', nargs=1, type=str,
+                                          metavar='/path/to/Blast/db.sequences.file',
                                           help='Path to DB sequence file. If Blast DB was already produced only provide'
                                                ' the one that do not end with ".n*" something (do not use for'
                                                ' example /blast_db.sequences.fasta.nhr). If no Blast DB was found for'
-                                               ' the DB sequence file, one will be created.',
+                                               ' the DB sequence file, one will be created in --outdir.',
                                           required=True)
     parser_assembly_required.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
                                           help='Blast DB type (available options: %(choices)s)', required=True)
@@ -481,11 +512,22 @@ def main():
                                                   help='Start %(prog)s from the beginning')
     parser_assembly_optional_general.add_argument('--notClean', action='store_true',
                                                   help='Do not remove intermediate files')
-    parser_assembly_optional_general.add_argument('--keepBlastDB', action='store_true',
-                                                  help='Do not remove the Blast DB produced.')
+
+    parser_blast_required = parser_blast.add_argument_group('Required options')
+    parser_blast_required.add_argument('-f', '--fasta', type=argparse.FileType('r'),
+                                       metavar='/path/to/db.sequences.fasta', help='Path to DB sequence file',
+                                       required=True)
+    parser_blast_required.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
+                                       help='Blast DB type (available options: %(choices)s)', required=True)
+
+    parser_assembly_optional_general = parser_assembly.add_argument_group('General facultative options')
+    parser_blast_required.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
+                                       help='Path to the directory where the information will be stored',
+                                       required=False, default='.')
 
     parser_reads.set_defaults(func=reads_subcommand)
     parser_assembly.set_defaults(func=assembly_subcommand)
+    parser_blast.set_defaults(func=blast_subcommand)
 
     args = parser.parse_args()
 
