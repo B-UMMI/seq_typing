@@ -35,7 +35,6 @@ import modules.run_rematch as run_rematch
 import modules.parse_results as parse_results
 import modules.run_blast as run_blast
 
-
 version = '1.0'
 
 
@@ -137,8 +136,8 @@ def include_rematch_dependencies_path():
 def clean_header(header, problematic_characters):
     new_header = header
     if any(x in header for x in problematic_characters):
-            for x in problematic_characters:
-                new_header = new_header.replace(x, '_')
+        for x in problematic_characters:
+            new_header = new_header.replace(x, '_')
     return header, new_header
 
 
@@ -240,86 +239,123 @@ def prepare_references(references, map_ref_together, references_dir):
 
 
 def assembly_subcommand(args):
+    msg = None
+    if args.minGeneCoverage is not None and (args.minGeneCoverage < 0 or args.minGeneCoverage > 100):
+        msg = '--minGeneCoverage should be a value between [0, 100]'
+    if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
+        msg = '--minGeneIdentity should be a value between [0, 100]'
+    if args.blast is None and args.species is None:
+        msg = '--blast or --species must be provided'
+    if msg is not None:
+        argparse.ArgumentParser.error(msg)
+
     if args.type == 'nucl':
         utils.required_programs({'blastn': ['-version', '>=', '2.6.0']})
     elif args.type == 'prot':
         utils.required_programs({'blastp': ['-version', '>=', '2.6.0']})
 
-    # For only one file
-    args.blast = os.path.abspath(args.blast[0])
     args.fasta = os.path.abspath(args.fasta[0].name)
+    if args.blast is not None:
+        args.blast = os.path.abspath(args.blast[0])
+    else:
+        args.blast, config = get_fasta_config(args.species)
+        config = parse_config(config)
+        args.minGeneCoverage = config['minimum_gene_coverage']
+
+        print('\n'
+              'Settings that will be used:\n'
+              '    DB reference file: {reference}\n'
+              '    minGeneCoverage: {minGeneCoverage}\n'
+              '\n'.format(reference=args.blast, minGeneCoverage=args.minGeneCoverage))
 
     folders_2_remove = []
 
     # Check Blast DB
-    db_exists = run_blast.check_db_exists(args.blast)
-    if not db_exists:
-        blast_db = os.path.join(args.outdir, 'blast_db', '{blast_DB}.{db_type}'.format(
-            blast_DB=os.path.basename(args.blast), db_type=args.type))
+    db_exists, original_file = run_blast.check_db_exists(args.blast)
+    if not db_exists and not original_file:
+        blast_db = os.path.join(args.outdir, 'blast_db', '{blast_DB}'.format(blast_DB=os.path.basename(args.blast)))
         folders_2_remove.append(os.path.dirname(blast_db))
 
         if not os.path.isdir(os.path.dirname(blast_db)):
             os.makedirs(os.path.dirname(blast_db))
 
         db_exists = run_blast.create_blast_db(args.blast, blast_db, args.type)
-        args.blast = str(blast_db)
+        if db_exists:
+            args.blast = str(blast_db)
+            original_file = True
 
-    if db_exists:
+    # Run Blast
+    blast_results = None
+    if db_exists and original_file:
+        _, headers_correspondence = parse_reference(args.blast, [])
+
         blast_output = os.path.join(args.outdir, 'blast_out', 'results.tab')
+        folders_2_remove.append(os.path.dirname(blast_output))
+
         if not os.path.isdir(os.path.dirname(blast_output)):
             os.makedirs(os.path.dirname(blast_output))
         run_successfully = run_blast.run_blast_command(args.fasta, args.blast, args.type, blast_output)
 
         if run_successfully:
-            _ = run_blast.parse_blast_output(blast_output)
-        exit('assembly_subcommand')
+            blast_results = run_blast.parse_blast_output(blast_output)
+
     else:
-        sys.exit('It was not found any Blast DB')
+        sys.exit('It was not found any Blast DB and/or the original fasta file from which the Blast DB was produced')
 
-    # TODO: continue this part
-    references_results, reference, references_headers = None, None, None
+    references_headers = {args.blast: headers_correspondence}
 
-    return folders_2_remove, references_results, reference, references_headers
+    return folders_2_remove, blast_results, args.blast, references_headers
 
 
 def blast_subcommand(args):
+    if args.fasta is None and args.species is None:
+        argparse.ArgumentParser.error('--fasta or --species must be provided')
+
     if args.type == 'nucl':
         utils.required_programs({'blastn': ['-version', '>=', '2.6.0']})
     elif args.type == 'prot':
         utils.required_programs({'blastp': ['-version', '>=', '2.6.0']})
 
-    args.fasta = os.path.abspath(args.fasta.name)
+    if args.fasta is not None:
+        args.fasta = os.path.abspath(args.fasta.name)
+    else:
+        args.fasta, _ = get_fasta_config(args.species)
+
+        print('\n'
+              'Settings that will be used:\n'
+              '    fasta: {reference}\n'
+              '\n'.format(reference=args.fasta))
 
     utils.removeDirectory(os.path.join(args.outdir, 'pickles', ''))
 
     # Create DB
-    blast_db = os.path.join(args.outdir, '{blast_DB}.{db_type}'.format(
-        blast_DB=os.path.basename(args.fasta), db_type=args.type))
-    db_exists = run_blast.check_db_exists(blast_db)
-    if not db_exists:
+    blast_db = os.path.join(args.outdir, '{blast_DB}'.format(blast_DB=os.path.basename(args.fasta)))
+    db_exists, original_file = run_blast.check_db_exists(blast_db)
+    if not db_exists and not original_file:
         db_exists = run_blast.create_blast_db(args.fasta, blast_db, args.type)
         if db_exists:
             print('Blast DB created for {file} in {outdir}'.format(file=args.fasta, outdir=args.outdir))
             sys.exit(0)
         else:
             sys.exit('It was not possible to create Blast DB or {}'.format(args.fasta))
-    else:
+    elif db_exists and original_file:
         sys.exit('Blast DB already found for {file} in {outdir} as {blast_db}'.format(file=args.fasta,
                                                                                       outdir=args.outdir,
                                                                                       blast_db=blast_db))
+    else:
+        sys.exit('It was found only Blast DB files or the original fasta file from which the Blast DB should be'
+                 ' produced. Either include the missing files or remove the ones present (usually the original fasta'
+                 ' file)')
 
 
 def reads_subcommand(args):
     msg = None
     if args.minGeneCoverage is not None and (args.minGeneCoverage < 0 or args.minGeneCoverage > 100):
         msg = '--minGeneCoverage should be a value between [0, 100]'
-
-    # if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
-    #     parser.error('--minGeneIdentity should be a value between [0, 100]')
-
+    if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
+        msg = '--minGeneIdentity should be a value between [0, 100]'
     if args.reference is None and args.species is None:
         msg = '--reference or --species must be provided'
-
     if msg is not None:
         argparse.ArgumentParser.error(msg)
 
@@ -362,7 +398,11 @@ def reads_subcommand(args):
 
     # Run ReMatCh
     pickle_file = os.path.join(pickles_folder, 'rematch_module.pkl')
-    if not os.path.isfile(pickle_file) or args.beginning:
+    if args.resume and os.path.isfile(pickle_file):
+        print('ReMatCh module already run')
+        references_results, module_dir = utils.extractVariableFromPickle(pickle_file)
+        folders_2_remove.append(module_dir)
+    else:
         runtime, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, references_files,
                                                                           args.fastq, args.threads, args.extraSeq,
                                                                           args.minCovPresence, args.minCovCall,
@@ -371,10 +411,6 @@ def reads_subcommand(args):
                                                                           args.debug, args.doNotRemoveConsensus)
         folders_2_remove.append(module_dir)
         utils.saveVariableToPickle([references_results, module_dir], pickle_file)
-    else:
-        print('ReMatCh module already run')
-        references_results, module_dir = utils.extractVariableFromPickle(pickle_file)
-        folders_2_remove.append(module_dir)
 
     return folders_2_remove, references_results, args.reference, references_headers
 
@@ -393,7 +429,9 @@ def main():
 
     parser_reads = subparsers.add_parser('reads', description='Run seq_typing.py using fastq files',
                                          help='reads --help')
-    parser_assembly = subparsers.add_parser('assembly', description='Run seq_typing.py using a fasta file',
+    parser_assembly = subparsers.add_parser('assembly', description='Run seq_typing.py using a fasta file. If running'
+                                                                    ' multiple samples using the same DB sequence file,'
+                                                                    ' consider use first "%(prog)s blast" module.',
                                             help='assembly --help')
     parser_blast = subparsers.add_parser('blast', description='Creates Blast DB. This is useful when running the same'
                                                               ' DB sequence file for different samples.',
@@ -414,7 +452,7 @@ def main():
                                              ' files name in the same order that the type must be determined.')
     parser_reads_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the species with reference sequences provided together'
-                                             ' with %(prog)s  for serotyping',
+                                             ' with %(prog)s for serotyping',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--species'))
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
@@ -456,19 +494,19 @@ def main():
                                                help='Minimum depth of coverage of target reference sequence to'
                                                     ' consider a sequence to be present',
                                                required=False)
-    parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS,
+    # parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS,
+    #                                            required=False, default=80)
+    parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
+                                               help='Minimum percentage of identity of reference sequence covered to'
+                                                    ' consider a gene to be present (value between [0, 100]). One INDEL'
+                                                    ' will be considered as one difference',
                                                required=False, default=80)
-    # parser_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
-    #                                      help='Minimum percentage of identity of reference sequence covered to'
-    #                                           ' consider a gene to be present (value between [0, 100]). One INDEL'
-    #                                           ' will be considered as one difference',
-    #                                      required=False, default=80)
     parser_reads_optional_general.add_argument('--doNotRemoveConsensus', action='store_true',
                                                help='Do not remove ReMatCh consensus sequences')
     parser_reads_optional_general.add_argument('--debug', action='store_true',
                                                help='DeBug Mode: do not remove temporary files')
-    parser_reads_optional_general.add_argument('--beginning', action='store_true',
-                                               help='Start %(prog)s from the beginning')
+    parser_reads_optional_general.add_argument('--resume', action='store_true',
+                                               help='Resume %(prog)s')
     parser_reads_optional_general.add_argument('--notClean', action='store_true',
                                                help='Do not remove intermediate files')
 
@@ -478,15 +516,21 @@ def main():
                                           help='Path to fasta file containing the query sequences from which the'
                                                ' types should be assessed',
                                           required=True)
-    parser_assembly_required.add_argument('-b', '--blast', nargs=1, type=str,
-                                          metavar='/path/to/Blast/db.sequences.file',
-                                          help='Path to DB sequence file. If Blast DB was already produced only provide'
-                                               ' the one that do not end with ".n*" something (do not use for'
-                                               ' example /blast_db.sequences.fasta.nhr). If no Blast DB was found for'
-                                               ' the DB sequence file, one will be created in --outdir.',
-                                          required=True)
     parser_assembly_required.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
                                           help='Blast DB type (available options: %(choices)s)', required=True)
+
+    parser_assembly_reference = parser_assembly.add_mutually_exclusive_group()
+    parser_assembly_reference.add_argument('-b', '--blast', nargs=1, type=str,
+                                           metavar='/path/to/Blast/db.sequences.file',
+                                           help='Path to DB sequence file. If Blast DB was already produced only'
+                                                ' provide the one that do not end with ".n*" something (do not use for'
+                                                ' example /blast_db.sequences.fasta.nhr). If no Blast DB was found for'
+                                                ' the DB sequence file, one will be created in --outdir.')
+    parser_assembly_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
+                                           help='Name of the species with DB sequence file provided'
+                                                ' ("serotype_reference_sequences" folder) together'
+                                                ' with %(prog)s for serotyping',
+                                           action=utils.arguments_choices_words(get_species_allowed(), '--species'))
 
     parser_assembly_optional_general = parser_assembly.add_argument_group('General facultative options')
     parser_assembly_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
@@ -506,24 +550,30 @@ def main():
                                                   help='Minimum percentage of identity of reference sequence covered'
                                                        ' to consider a gene to be present (value between [0, 100])',
                                                   required=False, default=80)
+    parser_assembly_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N', help=argparse.SUPPRESS,
+                                                  required=False, default=1)
     parser_assembly_optional_general.add_argument('--debug', action='store_true',
                                                   help='DeBug Mode: do not remove temporary files')
-    parser_assembly_optional_general.add_argument('--beginning', action='store_true',
-                                                  help='Start %(prog)s from the beginning')
-    parser_assembly_optional_general.add_argument('--notClean', action='store_true',
-                                                  help='Do not remove intermediate files')
+    parser_assembly_optional_general.add_argument('--resume', action='store_true', help=argparse.SUPPRESS)
+    parser_assembly_optional_general.add_argument('--notClean', action='store_true', help=argparse.SUPPRESS)
 
     parser_blast_required = parser_blast.add_argument_group('Required options')
-    parser_blast_required.add_argument('-f', '--fasta', type=argparse.FileType('r'),
-                                       metavar='/path/to/db.sequences.fasta', help='Path to DB sequence file',
-                                       required=True)
     parser_blast_required.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
                                        help='Blast DB type (available options: %(choices)s)', required=True)
 
-    parser_assembly_optional_general = parser_assembly.add_argument_group('General facultative options')
-    parser_blast_required.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                       help='Path to the directory where the information will be stored',
-                                       required=False, default='.')
+    parser_blast_reference = parser_blast.add_mutually_exclusive_group()
+    parser_blast_reference.add_argument('-f', '--fasta', type=argparse.FileType('r'),
+                                        metavar='/path/to/db.sequences.fasta', help='Path to DB sequence file')
+    parser_blast_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
+                                        help='Name of the species with DB sequence file provided'
+                                             ' ("serotype_reference_sequences" folder) together'
+                                             ' with %(prog)s for serotyping',
+                                        action=utils.arguments_choices_words(get_species_allowed(), '--species'))
+
+    parser_blast_optional_general = parser_blast.add_argument_group('General facultative options')
+    parser_blast_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
+                                               help='Path to the directory where the information will be stored',
+                                               required=False, default='.')
 
     parser_reads.set_defaults(func=reads_subcommand)
     parser_assembly.set_defaults(func=assembly_subcommand)
@@ -552,20 +602,13 @@ def main():
         os.makedirs(pickles_folder)
     folders_2_remove.append(pickles_folder)
 
+    # Run functions
     folders_2_remove_func, references_results, reference, references_headers = args.func(args)
     folders_2_remove.extend(folders_2_remove_func)
 
     # Parse results
-    pickle_file = os.path.join(pickles_folder, 'parse_results.pkl')
-    if not os.path.isfile(pickle_file) or args.beginning:
-        seq_type, seq_type_info, probable_results, improbable_results = \
-            parse_results.parse_results(references_results, reference, references_headers, args.outdir,
-                                        args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
-        utils.saveVariableToPickle([seq_type, seq_type_info, probable_results, improbable_results], pickle_file)
-    else:
-        print('Results parser module already run')
-        seq_type, seq_type_info, probable_results, improbable_results = utils.extractVariableFromPickle(pickle_file)
-        parse_results.write_reports(args.outdir, seq_type, seq_type_info, probable_results, improbable_results)
+    _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
+                                             args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
 
     if not args.notClean and not args.debug:
         for folder in folders_2_remove:

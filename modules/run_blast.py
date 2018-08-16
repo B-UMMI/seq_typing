@@ -16,18 +16,23 @@ def check_db_exists(db_path):
     -------
     db_exists : bool
         Tells if the Blast DB already exists
+    original_file : bool
+        Tells if the original fasta file from which the Blast DB was produced is present
     """
     db_exists = False
     files = [f for f in os.listdir(os.path.dirname(db_path))
              if not f.startswith('.')
              and os.path.isfile(os.path.join(os.path.dirname(db_path), f))]
     counter = 0
+    original_file = False
     for file_found in files:
-        if os.path.splitext(file_found)[0] == os.path.basename(db_path):
+        if file_found == os.path.basename(db_path):
+            original_file = True
+        elif os.path.splitext(file_found)[0] == os.path.basename(db_path):
             counter += 1
-    if counter > 1:
+    if counter > 0:
         db_exists = True
-    return db_exists
+    return db_exists, original_file
 
 
 def create_blast_db(db_sequences, db_output, db_type):
@@ -59,15 +64,29 @@ def create_blast_db(db_sequences, db_output, db_type):
     if not os.path.isdir(os.path.dirname(db_output)):
         os.makedirs(os.path.dirname(db_output))
     else:
-        if check_db_exists(db_output):
+        db_exists, original_file = check_db_exists(db_output)
+        if db_exists and original_file:
             print('Blast DB already found at {db_output}'
                   ' for {db_sequences}'.format(db_output=os.path.dirname(db_output),
                                                db_sequences=db_sequences,
                                                file_found=os.path.basename(db_sequences)))
+
             run_successfully = True
+        elif db_exists and not original_file:
+            print('The original fasta file ({db_sequences}) from which the Blast DB was produced is not present. Make'
+                  ' sure it is found in {db_dir} and it is'
+                  ' named {original_file_name}'.format(db_dir=os.path.dirname(db_output), db_sequences=db_sequences,
+                                                       original_file_name=os.path.basename(db_output)))
+        elif not db_exists and original_file:
+            print('The original fasta file ({db_sequences}) from which the Blast DB was supposed to be produced is'
+                  ' present in Blast DB directory ({db_dir}), but no Blast DB files were found'
+                  ' there.'.format(db_sequences=db_sequences, db_dir=os.path.dirname(db_output)))
         else:
             run_successfully, _, _ = RUN_subprocess(['makeblastdb', '-parse_seqids', '-dbtype', db_type, '-in',
                                                      db_sequences, '-out', db_output], False, None, True)
+            if run_successfully:
+                from shutil import copyfile
+                copyfile(db_sequences, db_output)
 
     return run_successfully
 
@@ -140,16 +159,9 @@ def parse_blast_output(blast_output):
     # 'query_id', 'query_length', 'subject_id', 'subject_length', 'q_start', 'q_end', 's_start', 's_end', 'evalue',
     # 'alignment_length', 'percentage_identity', 'identical', 'mismatches', 'gaps'
 
-    output_blast_by_query = {}
-    output_blast_by_subject = {}
+    output_blast = {}
     # To make it compatible with ReMatCh results
-    subject_index_by_query = {}
-    subject_index_by_subject = {}
-
-    # TODO: Simplify the code for output_blast and subject_index using functions
-    # TODO: maybe keep only the by_subject (think on how will it compromise the other_possible_types (for example)
-    # TODO: make verification if output_blast contains only one sequence and if so discard by_subject
-    # TODO: if is to keep by_subject do extra clean to only keep the best query (contig) result and reformat the output
+    subject_index = {}
 
     # Read Blast output
     with open(blast_output, 'rt') as reader:
@@ -160,104 +172,54 @@ def parse_blast_output(blast_output):
                     line = line.split('\t')
 
                     # By subject
-                    if line[2] not in output_blast_by_subject:
-                        output_blast_by_subject[line[2]] = {}
-                        subject_index_by_subject[line[2]] = {}
-
-                    counter = len(subject_index_by_subject[line[2]]) + 1
-                    if line[0] not in subject_index_by_subject[line[2]]:
-                        output_blast_by_subject[line[2]][counter] = {'header': line[2], 'gene_coverage': int(line[9]),
-                                                                     'gene_low_coverage': 0,
-                                                                     'gene_number_positions_multiple_alleles': 0,
-                                                                     'gene_mean_read_coverage': 1,
-                                                                     'gene_identity': float(line[10]),
-                                                                     'q_start': int(line[4]),
-                                                                     'q_end': int(line[5]), 's_start': int(line[6]),
-                                                                     's_end': int(line[7]), 'evalue': float(line[8]),
-                                                                     'gaps': int(line[13]), 'query': line[0]}
-                        subject_index_by_subject[line[2]][line[0]] = counter
+                    counter = len(subject_index) + 1
+                    if line[2] not in subject_index:
+                        subject_index[line[2]] = counter
+                        output_blast[counter] = {'header': line[2],
+                                                 'gene_coverage': int(line[9]) / float(line[3]),
+                                                 'gene_low_coverage': 0,
+                                                 'gene_number_positions_multiple_alleles': 0,
+                                                 'gene_mean_read_coverage': 1,
+                                                 'gene_identity': float(line[10]),
+                                                 'q_start': int(line[4]),
+                                                 'q_end': int(line[5]), 's_start': int(line[6]),
+                                                 's_end': int(line[7]), 'evalue': float(line[8]),
+                                                 'gaps': int(line[13]), 'query': line[0],
+                                                 'alignment_length': int(line[9]), 'subject_length': int(line[3])}
                     else:
-                        previous_blast_results = \
-                            output_blast_by_subject[line[2]][subject_index_by_subject[line[2]][line[0]]]
-                        present_blast_results = {'header': line[2], 'gene_coverage': int(line[9]),
+                        previous_blast_results = output_blast[subject_index[line[2]]]
+                        present_blast_results = {'header': line[2], 'gene_coverage': int(line[9]) / float(line[3]),
                                                  'gene_low_coverage': 0, 'gene_number_positions_multiple_alleles': 0,
                                                  'gene_mean_read_coverage': 1, 'gene_identity': float(line[10]),
                                                  'q_start': int(line[4]), 'q_end': int(line[5]),
                                                  's_start': int(line[6]), 's_end': int(line[7]),
                                                  'evalue': float(line[8]),
-                                                 'gaps': int(line[13]), 'query': line[0]}
+                                                 'gaps': int(line[13]), 'query': line[0],
+                                                 'alignment_length': int(line[9]), 'subject_length': int(line[3])}
 
                         to_change = False
-                        if previous_blast_results['gene_coverage'] < int(line[9]):
+                        if previous_blast_results['alignment_length'] < int(line[9]):
                             to_change = True
-                        elif previous_blast_results['gene_coverage'] == int(line[9]) and \
-                                previous_blast_results['gene_identity'] <= int(line[10]):
-                            if previous_blast_results['gene_identity'] < int(line[10]):
+                        elif previous_blast_results['alignment_length'] == int(line[9]) and \
+                                previous_blast_results['gene_coverage'] <= present_blast_results['gene_coverage']:
+                            if previous_blast_results['gene_coverage'] < present_blast_results['gene_coverage']:
                                 to_change = True
-                            elif previous_blast_results['gene_identity'] == int(line[10]) and \
-                                    previous_blast_results['evalue'] >= int(line[8]):
-                                if previous_blast_results['evalue'] > int(line[8]):
+                            elif previous_blast_results['gene_coverage'] == present_blast_results['gene_coverage'] and \
+                                    previous_blast_results['gene_identity'] <= float(line[10]):
+                                if previous_blast_results['gene_identity'] < float(line[10]):
                                     to_change = True
-                                elif previous_blast_results['evalue'] == int(line[8]) and \
-                                        previous_blast_results['gaps'] > int(line[13]):
-                                    to_change = True
+                                elif previous_blast_results['gene_identity'] == float(line[10]) and \
+                                        previous_blast_results['evalue'] >= float(line[8]):
+                                    if previous_blast_results['evalue'] > float(line[8]):
+                                        to_change = True
+                                    elif previous_blast_results['evalue'] == float(line[8]) and \
+                                            previous_blast_results['gaps'] > int(line[13]):
+                                        to_change = True
 
                         if to_change:
-                            output_blast_by_subject[line[2]][
-                                subject_index_by_subject[line[2]][line[0]]] = present_blast_results
+                            output_blast[subject_index[line[2]]] = present_blast_results
 
-                    # By query
-                    if line[0] not in output_blast_by_query:
-                        output_blast_by_query[line[0]] = {}
-                        subject_index_by_query[line[0]] = {}
-
-                    counter = len(subject_index_by_query[line[0]]) + 1
-                    if line[2] not in subject_index_by_query[line[0]]:
-                        output_blast_by_query[line[0]][counter] = {'header': line[2], 'gene_coverage': int(line[9]),
-                                                                   'gene_low_coverage': 0,
-                                                                   'gene_number_positions_multiple_alleles': 0,
-                                                                   'gene_mean_read_coverage': 1,
-                                                                   'gene_identity': float(line[10]),
-                                                                   'q_start': int(line[4]),
-                                                                   'q_end': int(line[5]), 's_start': int(line[6]),
-                                                                   's_end': int(line[7]), 'evalue': float(line[8]),
-                                                                   'gaps': int(line[13]), 'query': line[0]}
-                        subject_index_by_query[line[0]][line[2]] = counter
-                    else:
-                        previous_blast_results = \
-                            output_blast_by_query[line[0]][subject_index_by_query[line[0]][line[2]]]
-                        present_blast_results = {'header': line[2], 'gene_coverage': int(line[9]),
-                                                 'gene_low_coverage': 0, 'gene_number_positions_multiple_alleles': 0,
-                                                 'gene_mean_read_coverage': 1, 'gene_identity': float(line[10]),
-                                                 'q_start': int(line[4]), 'q_end': int(line[5]),
-                                                 's_start': int(line[6]), 's_end': int(line[7]),
-                                                 'evalue': float(line[8]),
-                                                 'gaps': int(line[13]), 'query': line[0]}
-
-                        to_change = False
-                        if previous_blast_results['gene_coverage'] < int(line[9]):
-                            to_change = True
-                        elif previous_blast_results['gene_coverage'] == int(line[9]) and \
-                                previous_blast_results['gene_identity'] <= int(line[10]):
-                            if previous_blast_results['gene_identity'] < int(line[10]):
-                                to_change = True
-                            elif previous_blast_results['gene_identity'] == int(line[10]) and \
-                                    previous_blast_results['evalue'] >= int(line[8]):
-                                if previous_blast_results['evalue'] > int(line[8]):
-                                    to_change = True
-                                elif previous_blast_results['evalue'] == int(line[8]) and \
-                                        previous_blast_results['gaps'] > int(line[13]):
-                                    to_change = True
-
-                        if to_change:
-                            output_blast_by_query[line[0]][
-                                subject_index_by_query[line[0]][line[2]]] = present_blast_results
-
-    print('output_blast', output_blast_by_subject)
-    print('sequences_db_index', subject_index_by_subject)
-    sys.exit('parse_blast_output')
-
-    # return None
+    return output_blast
 
 
 def run_blast(fasta_file, db_path, threads, outdir):
