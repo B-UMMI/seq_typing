@@ -239,14 +239,17 @@ def prepare_references(references, map_ref_together, references_dir):
 
 
 def assembly_subcommand(args):
-    msg = None
+    msg = []
     if args.minGeneCoverage is not None and (args.minGeneCoverage < 0 or args.minGeneCoverage > 100):
-        msg = '--minGeneCoverage should be a value between [0, 100]'
+        msg.append('--minGeneCoverage should be a value between [0, 100]')
     if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
-        msg = '--minGeneIdentity should be a value between [0, 100]'
+        msg.append('--minGeneIdentity should be a value between [0, 100]')
     if args.blast is None and args.species is None:
-        msg = '--blast or --species must be provided'
-    if msg is not None:
+        msg.append('--blast or --species must be provided')
+    if args.blast is not None and args.type is None:
+        msg.append('With --blast option you must provide the --type')
+
+    if len(msg) > 0:
         argparse.ArgumentParser.error(msg)
 
     if args.type == 'nucl':
@@ -256,27 +259,49 @@ def assembly_subcommand(args):
 
     args.fasta = os.path.abspath(args.fasta[0].name)
     if args.blast is not None:
-        args.blast = os.path.abspath(args.blast[0])
+        args.blast = [blast.name for blast in args.blast]
     else:
         args.blast, config = get_fasta_config(args.species)
         config = parse_config(config)
+        if args.type != 'nucl':
+            print('\n'
+                  'ATTENTION: Blast DB type provided was not "nucl"'
+                  'It was changed to "nucl"'
+                  '\n')
+        args.type = 'nucl'
         args.minGeneCoverage = config['minimum_gene_coverage']
 
         print('\n'
               'Settings that will be used:\n'
               '    DB reference file: {reference}\n'
+              '    Blast DB type: nucl\n'
               '    minGeneCoverage: {minGeneCoverage}\n'
               '\n'.format(reference=args.blast, minGeneCoverage=args.minGeneCoverage))
 
-    _, folders_2_remove, blast_results, args.blast, headers_correspondence = run_blast.run_blast(args.blast, args.outdir,
-                                                                                             args.type, args.fasta)
+    folders_2_remove_all = []
+    references_results_all = {}
+    references_headers_all = {}
+    blast_files = []
+    for blast in args.blast:
+        _, folders_2_remove, blast_results, blast, headers_correspondence = run_blast.run_blast(blast, args.outdir,
+                                                                                                args.type, args.fasta)
+        folders_2_remove_all.extend(folders_2_remove)
+        references_results_all[blast] = blast_results
+        references_headers_all[blast] = headers_correspondence
+        blast_files.append(blast)
 
-    return folders_2_remove, {args.blast: blast_results}, [args.blast], {args.blast: headers_correspondence}
+    return folders_2_remove_all, references_results_all, blast_files, references_headers_all
 
 
 def blast_subcommand(args):
+    msg = []
+    if args.fasta is not None and args.type is None:
+        msg.append('With --fasta option you must provide the --type')
     if args.fasta is None and args.species is None:
-        argparse.ArgumentParser.error('--fasta or --species must be provided')
+        msg.append('--fasta or --species must be provided')
+
+    if len(msg) > 0:
+        argparse.ArgumentParser.error(msg)
 
     if args.type == 'nucl':
         utils.required_programs({'blastn': ['-version', '>=', '2.6.0']})
@@ -284,46 +309,61 @@ def blast_subcommand(args):
         utils.required_programs({'blastp': ['-version', '>=', '2.6.0']})
 
     if args.fasta is not None:
-        args.fasta = os.path.abspath(args.fasta.name)
+        args.fasta = [fasta.name for fasta in args.fasta]
     else:
         args.fasta, _ = get_fasta_config(args.species)
+        if args.type != 'nucl':
+            print('\n'
+                  'ATTENTION: Blast DB type provided was not "nucl"'
+                  'It was changed to "nucl"'
+                  '\n')
+        args.type = 'nucl'
 
         print('\n'
               'Settings that will be used:\n'
               '    fasta: {reference}\n'
+              '    Blast DB type: nucl\n'
               '\n'.format(reference=args.fasta))
 
     utils.removeDirectory(os.path.join(args.outdir, 'pickles', ''))
 
-    # Create DB
-    blast_db = os.path.join(args.outdir, '{blast_DB}'.format(blast_DB=os.path.basename(args.fasta)))
-    db_exists, original_file = run_blast.check_db_exists(blast_db)
-    if not db_exists and not original_file:
-        db_exists = run_blast.create_blast_db(args.fasta, blast_db, args.type)
-        if db_exists:
-            print('Blast DB created for {file} in {outdir}'.format(file=args.fasta, outdir=args.outdir))
-            sys.exit(0)
+    error_msg = []
+    for fasta in args.fasta:
+        # Create DB
+        blast_db = os.path.join(args.outdir, '{blast_DB}'.format(blast_DB=os.path.basename(fasta)))
+        db_exists, original_file = run_blast.check_db_exists(blast_db)
+        if not db_exists and not original_file:
+            db_exists = run_blast.create_blast_db(fasta, blast_db, args.type)
+            if db_exists:
+                print('Blast DB created for {file} in {outdir}'.format(file=fasta, outdir=args.outdir))
+                # sys.exit(0)
+            else:
+                error_msg.append('It was not possible to create Blast DB or {}'.format(fasta))
+        elif db_exists and original_file:
+            error_msg.append('Blast DB already found for {file} in {outdir} as {blast_db}'.format(file=fasta,
+                                                                                                  outdir=args.outdir,
+                                                                                                  blast_db=blast_db))
         else:
-            sys.exit('It was not possible to create Blast DB or {}'.format(args.fasta))
-    elif db_exists and original_file:
-        sys.exit('Blast DB already found for {file} in {outdir} as {blast_db}'.format(file=args.fasta,
-                                                                                      outdir=args.outdir,
-                                                                                      blast_db=blast_db))
+            error_msg.append('It was found only Blast DB files or the original fasta file from which the Blast DB'
+                             ' should be produced ({file}). Either include the missing files or remove the ones present'
+                             ' (usually the original fasta file)'.format(file=fasta))
+
+    if len(error_msg) == 0:
+        sys.exit(0)
     else:
-        sys.exit('It was found only Blast DB files or the original fasta file from which the Blast DB should be'
-                 ' produced. Either include the missing files or remove the ones present (usually the original fasta'
-                 ' file)')
+        sys.exit('\n'.join(error_msg))
 
 
 def reads_subcommand(args):
-    msg = None
+    msg = []
     if args.minGeneCoverage is not None and (args.minGeneCoverage < 0 or args.minGeneCoverage > 100):
-        msg = '--minGeneCoverage should be a value between [0, 100]'
+        msg.append('--minGeneCoverage should be a value between [0, 100]')
     if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
-        msg = '--minGeneIdentity should be a value between [0, 100]'
+        msg.append('--minGeneIdentity should be a value between [0, 100]')
     if args.reference is None and args.species is None:
-        msg = '--reference or --species must be provided'
-    if msg is not None:
+        msg.append('--reference or --species must be provided')
+
+    if len(msg) > 0:
         argparse.ArgumentParser.error(msg)
 
     rematch_script = include_rematch_dependencies_path()
@@ -415,8 +455,8 @@ def main():
     parser_reads_reference.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'),
                                         metavar='/path/to/reference_sequence.fasta',
                                         help='Fasta file containing reference sequences. If more than one file is'
-                                             ' passed, a reference sequence for each file will be determined. Give the'
-                                             ' files name in the same order that the type must be determined.')
+                                             ' passed, a type for each file will be determined. Give the files name in'
+                                             ' the same order that the type must be determined.')
     parser_reads_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the species with reference sequences provided together'
                                              ' with %(prog)s for serotyping',
@@ -483,21 +523,23 @@ def main():
                                           help='Path to fasta file containing the query sequences from which the'
                                                ' types should be assessed',
                                           required=True)
-    parser_assembly_required.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
-                                          help='Blast DB type (available options: %(choices)s)', required=True)
 
     parser_assembly_reference = parser_assembly.add_mutually_exclusive_group()
-    parser_assembly_reference.add_argument('-b', '--blast', nargs=1, type=str,
+    parser_assembly_reference.add_argument('-b', '--blast', nargs='+', type=argparse.FileType('r'),
                                            metavar='/path/to/Blast/db.sequences.file',
                                            help='Path to DB sequence file. If Blast DB was already produced only'
                                                 ' provide the one that do not end with ".n*" something (do not use for'
                                                 ' example /blast_db.sequences.fasta.nhr). If no Blast DB was found for'
-                                                ' the DB sequence file, one will be created in --outdir.')
+                                                ' the DB sequence file, one will be created in --outdir. If more than'
+                                                ' one Blast DB file is passed, a type for each file will be determined.'
+                                                ' Give the files in the same order that the type must be determined.')
     parser_assembly_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                            help='Name of the species with DB sequence file provided'
                                                 ' ("serotype_reference_sequences" folder) together'
                                                 ' with %(prog)s for serotyping',
                                            action=utils.arguments_choices_words(get_species_allowed(), '--species'))
+    parser_assembly_reference.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
+                                           help='Blast DB type (available options: %(choices)s)')
 
     parser_assembly_optional_general = parser_assembly.add_argument_group('General facultative options')
     parser_assembly_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
@@ -529,8 +571,10 @@ def main():
                                        help='Blast DB type (available options: %(choices)s)', required=True)
 
     parser_blast_reference = parser_blast.add_mutually_exclusive_group()
-    parser_blast_reference.add_argument('-f', '--fasta', type=argparse.FileType('r'),
-                                        metavar='/path/to/db.sequences.fasta', help='Path to DB sequence file')
+    parser_blast_reference.add_argument('-f', '--fasta', nargs='+', type=argparse.FileType('r'),
+                                        metavar='/path/to/db.sequences.fasta',
+                                        help='Path to DB sequence file. If more than one file is passed, a Blast DB for'
+                                             ' each file will be created.')
     parser_blast_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the species with DB sequence file provided'
                                              ' ("serotype_reference_sequences" folder) together'

@@ -3,7 +3,6 @@ import sys
 from functools import partial
 
 import modules.utils as utils
-from seq_typing import parse_reference
 
 
 def check_db_exists(db_path):
@@ -85,8 +84,9 @@ def create_blast_db(db_sequences, db_output, db_type):
                   ' present in Blast DB directory ({db_dir}), but no Blast DB files were found'
                   ' there.'.format(db_sequences=db_sequences, db_dir=os.path.dirname(db_output)))
         else:
-            run_successfully, _, _ = RUN_subprocess(['makeblastdb', '-parse_seqids', '-dbtype', db_type, '-in',
-                                                     db_sequences, '-out', db_output], False, None, True)
+            run_successfully, _, _ = utils.runCommandPopenCommunicate(['makeblastdb', '-parse_seqids', '-dbtype',
+                                                                       db_type, '-in', db_sequences, '-out', db_output],
+                                                                      False, None, True)
             if run_successfully:
                 from shutil import copyfile
                 copyfile(db_sequences, db_output)
@@ -136,7 +136,7 @@ def run_blast_command(query_file, blast_db, db_type, blast_output, threads=1):
 
     command[8] = "'7 qseqid qlen sseqid slen qstart qend sstart send evalue length pident nident mismatch gaps'"
 
-    run_successfully, _, _ = RUN_subprocess(command, False, None, True)
+    run_successfully, _, _ = utils.runCommandPopenCommunicate(command, False, None, True)
 
     return run_successfully
 
@@ -259,7 +259,7 @@ def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
 
     # Check Blast DB
     db_exists, original_file = check_db_exists(blast_db_path)
-    if not db_exists and not original_file:
+    if not db_exists:
         blast_db = os.path.join(outdir, 'blast_db', '{blast_DB}'.format(blast_DB=os.path.basename(blast_db_path)))
         folders_2_remove.append(os.path.dirname(blast_db))
 
@@ -268,11 +268,18 @@ def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
 
         db_exists = create_blast_db(blast_db_path, blast_db, blast_type)
         if db_exists:
+            print('>>>d')
             blast_db_path = str(blast_db)
             original_file = True
+    elif db_exists and not original_file:
+        sys.exit('Original fasta file from which the Blast DB was produced ({blast_db_path}) is missing'
+                 ' from {blast_db_dir}'.format(blast_db_path=os.path.basename(blast_db_path),
+                                               blast_db_dir=os.path.dirname(blast_db_path)))
 
     # Run Blast
     if db_exists and original_file:
+        sys.path.append('..')
+        from seq_typing import parse_reference
         _, headers_correspondence = parse_reference(blast_db_path, [])
 
         blast_output = os.path.join(outdir, 'blast_out', 'results.tab')
