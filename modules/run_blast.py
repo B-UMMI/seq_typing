@@ -1,6 +1,9 @@
 import os.path
 import sys
-from modules.utils import runCommandPopenCommunicate as RUN_subprocess
+from functools import partial
+
+import modules.utils as utils
+from seq_typing import parse_reference
 
 
 def check_db_exists(db_path):
@@ -216,3 +219,74 @@ def parse_blast_output(blast_output):
                             output_blast[line[2]] = present_blast_results
 
     return output_blast
+
+
+module_timer = partial(utils.timer, name='Module Blast')
+
+
+@module_timer
+def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
+    """
+    Parse Blast output
+
+    Parameters
+    ----------
+    blast_db_path : str
+        Path to Blast DB files, e.g. /input/blast_db.nucl.sequences.fasta. If Blast DB is not found, it will be created
+        under the outdir folder
+    outdir : str
+        Path to output directory
+    blast_type : str
+        Blast DB type. Can only be 'nucl' or 'prot'
+    query_fasta_file : str
+        Path to fasta file containing the query sequences, e.g. /input/queries.fasta
+
+    Returns
+    -------
+    folders_2_remove : list
+        List of folders that can be removed at the end
+    blast_results : dict
+        Dictionary with Blast results cleaned and almost already formated for parse_results.py: subject as key and
+        values similar to ReMatCh results
+    blast_db_path : str
+        Path to Blast DB used
+    headers_correspondence : dict
+        Dictionary sequence headers correspondence if headers were changed. Keys are the new headers and values the
+        original ones. If headers were not changed, keys and vules are the same.
+    """
+
+    folders_2_remove = []
+
+    # Check Blast DB
+    db_exists, original_file = check_db_exists(blast_db_path)
+    if not db_exists and not original_file:
+        blast_db = os.path.join(outdir, 'blast_db', '{blast_DB}'.format(blast_DB=os.path.basename(blast_db_path)))
+        folders_2_remove.append(os.path.dirname(blast_db))
+
+        if not os.path.isdir(os.path.dirname(blast_db)):
+            os.makedirs(os.path.dirname(blast_db))
+
+        db_exists = create_blast_db(blast_db_path, blast_db, blast_type)
+        if db_exists:
+            blast_db_path = str(blast_db)
+            original_file = True
+
+    # Run Blast
+    if db_exists and original_file:
+        _, headers_correspondence = parse_reference(blast_db_path, [])
+
+        blast_output = os.path.join(outdir, 'blast_out', 'results.tab')
+        folders_2_remove.append(os.path.dirname(blast_output))
+
+        if not os.path.isdir(os.path.dirname(blast_output)):
+            os.makedirs(os.path.dirname(blast_output))
+        run_successfully = run_blast_command(query_fasta_file, blast_db_path, blast_type, blast_output)
+
+        if run_successfully:
+            blast_results = parse_blast_output(blast_output)
+        else:
+            sys.exit('Blast was not run successfully')
+    else:
+        sys.exit('It was not found any Blast DB and/or the original fasta file from which the Blast DB was produced')
+
+    return folders_2_remove, blast_results, blast_db_path, headers_correspondence

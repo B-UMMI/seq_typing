@@ -268,43 +268,10 @@ def assembly_subcommand(args):
               '    minGeneCoverage: {minGeneCoverage}\n'
               '\n'.format(reference=args.blast, minGeneCoverage=args.minGeneCoverage))
 
-    folders_2_remove = []
+    _, folders_2_remove, blast_results, args.blast, headers_correspondence = run_blast.run_blast(args.blast, args.outdir,
+                                                                                             args.type, args.fasta)
 
-    # Check Blast DB
-    db_exists, original_file = run_blast.check_db_exists(args.blast)
-    if not db_exists and not original_file:
-        blast_db = os.path.join(args.outdir, 'blast_db', '{blast_DB}'.format(blast_DB=os.path.basename(args.blast)))
-        folders_2_remove.append(os.path.dirname(blast_db))
-
-        if not os.path.isdir(os.path.dirname(blast_db)):
-            os.makedirs(os.path.dirname(blast_db))
-
-        db_exists = run_blast.create_blast_db(args.blast, blast_db, args.type)
-        if db_exists:
-            args.blast = str(blast_db)
-            original_file = True
-
-    # Run Blast
-    blast_results = None
-    if db_exists and original_file:
-        _, headers_correspondence = parse_reference(args.blast, [])
-
-        blast_output = os.path.join(args.outdir, 'blast_out', 'results.tab')
-        folders_2_remove.append(os.path.dirname(blast_output))
-
-        if not os.path.isdir(os.path.dirname(blast_output)):
-            os.makedirs(os.path.dirname(blast_output))
-        run_successfully = run_blast.run_blast_command(args.fasta, args.blast, args.type, blast_output)
-
-        if run_successfully:
-            blast_results = run_blast.parse_blast_output(blast_output)
-
-    else:
-        sys.exit('It was not found any Blast DB and/or the original fasta file from which the Blast DB was produced')
-
-    references_headers = {args.blast: headers_correspondence}
-
-    return folders_2_remove, blast_results, args.blast, references_headers
+    return folders_2_remove, {args.blast: blast_results}, [args.blast], {args.blast: headers_correspondence}
 
 
 def blast_subcommand(args):
@@ -403,12 +370,12 @@ def reads_subcommand(args):
         references_results, module_dir = utils.extractVariableFromPickle(pickle_file)
         folders_2_remove.append(module_dir)
     else:
-        runtime, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, references_files,
-                                                                          args.fastq, args.threads, args.extraSeq,
-                                                                          args.minCovPresence, args.minCovCall,
-                                                                          args.minFrequencyDominantAllele,
-                                                                          args.minGeneCoverage, args.minGeneIdentity,
-                                                                          args.debug, args.doNotRemoveConsensus)
+        _, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, references_files,
+                                                                    args.fastq, args.threads, args.extraSeq,
+                                                                    args.minCovPresence, args.minCovCall,
+                                                                    args.minFrequencyDominantAllele,
+                                                                    args.minGeneCoverage, args.minGeneIdentity,
+                                                                    args.debug, args.doNotRemoveConsensus)
         folders_2_remove.append(module_dir)
         utils.saveVariableToPickle([references_results, module_dir], pickle_file)
 
@@ -607,8 +574,8 @@ def main():
     folders_2_remove.extend(folders_2_remove_func)
 
     # Parse results
-    _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
-                                             args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
+    _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
+                                                args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
 
     if not args.notClean and not args.debug:
         for folder in folders_2_remove:

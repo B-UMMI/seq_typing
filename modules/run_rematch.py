@@ -1,4 +1,4 @@
-import functools
+from functools import partial
 import os
 import sys
 
@@ -75,7 +75,7 @@ def rematch_for_different_references(fastq, references_files, threads, outdir, e
     return references_results
 
 
-module_timer = functools.partial(utils.timer, name='Module ReMatCh')
+module_timer = partial(utils.timer, name='Module ReMatCh')
 
 
 @module_timer

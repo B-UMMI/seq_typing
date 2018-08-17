@@ -1,4 +1,5 @@
 import os.path
+from functools import partial
 
 import modules.utils as utils
 
@@ -198,15 +199,18 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                                        list(map(str, data))) + '\n')
 
 
+module_timer = partial(utils.timer, name='Module Parse results')
+
+
+@module_timer
 def parse_results(references_results, references_files, references_headers, outdir, min_gene_coverage,
                   min_depth_coverage, type_separator):
     try:
         references_results = split_references_results_by_references(references_results, references_headers)
     except TypeError:
-        # For Blast results
-        # Include the Blast results into a dictionary with DB file as key for downstream compatibility
-        references_results = {references_files: references_results}
-        references_files = [references_files]
+        print('Parsing assembly results')
+    else:
+        print('Parsing reads results')
     finally:
         seq_type, seq_type_info, probable_results, improbable_results = get_results(references_results,
                                                                                     min_gene_coverage,
