@@ -55,14 +55,21 @@ def clean_headers_reference_file(reference_file, outdir, extraSeq, rematch_modul
     return new_reference_file, headers, sequences
 
 
-def rematch_for_different_references(fastq, references_files, threads, outdir, extraSeq, minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage, debug, minGeneIdentity, rematch_module, doNotRemoveConsensus):
+def rematch_for_different_references(fastq, references_files, threads, outdir, extraSeq, minCovPresence, minCovCall,
+                                     minFrequencyDominantAllele, minGeneCoverage, debug, minGeneIdentity,
+                                     rematch_module, doNotRemoveConsensus):
     references_results = {}
     for x, reference in enumerate(references_files):
         reference_name = os.path.basename(reference) + '_' + str(x)
         ref_dir = os.path.join(outdir, reference_name, '')
         os.makedirs(ref_dir)
-        reference_file, gene_list_reference, reference_dict = clean_headers_reference_file(reference, ref_dir, extraSeq, rematch_module)
-        time_taken, run_successfully, data_by_gene, sample_data_general, consensus_files, consensus_sequences = rematch_module.runRematchModule('sample', fastq, reference_file, threads, ref_dir, extraSeq, minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage, False, debug, 1, minGeneIdentity, 'first', 7, 'none', reference_dict, 'X', None, gene_list_reference, not doNotRemoveConsensus)
+        reference_file, gene_list_reference, reference_dict = clean_headers_reference_file(reference, ref_dir, extraSeq,
+                                                                                           rematch_module)
+        time_taken, run_successfully, data_by_gene, sample_data_general, consensus_files, consensus_sequences = \
+            rematch_module.runRematchModule('sample', fastq, reference_file, threads, ref_dir, extraSeq, minCovPresence,
+                                            minCovCall, minFrequencyDominantAllele, minGeneCoverage, False, debug, 1,
+                                            minGeneIdentity, 'first', 7, 'none', reference_dict, 'X', None,
+                                            gene_list_reference, not doNotRemoveConsensus)
         if run_successfully:
             pickleFile = os.path.join(outdir, str(reference_name + '.pkl'))
             utils.saveVariableToPickle(data_by_gene, pickleFile)
@@ -79,7 +86,8 @@ module_timer = partial(utils.timer, name='Module ReMatCh')
 
 
 @module_timer
-def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraSeq, minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage, minGeneIdentity, debug, doNotRemoveConsensus):
+def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraSeq, minCovPresence, minCovCall,
+                minFrequencyDominantAllele, minGeneCoverage, minGeneIdentity, debug, doNotRemoveConsensus):
     module_dir = os.path.join(outdir, 'rematch', '')
     utils.removeDirectory(module_dir)
     os.makedirs(module_dir)
@@ -89,6 +97,9 @@ def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraS
     autotranslate(['rematch_module', 'utils'])
     import rematch_module
 
-    references_results = rematch_for_different_references(fastq, references_files, threads, module_dir, extraSeq, minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage, debug, minGeneIdentity, rematch_module, doNotRemoveConsensus)
+    references_results = rematch_for_different_references(fastq, references_files, threads, module_dir, extraSeq,
+                                                          minCovPresence, minCovCall, minFrequencyDominantAllele,
+                                                          minGeneCoverage, debug, minGeneIdentity, rematch_module,
+                                                          doNotRemoveConsensus)
 
     return references_results, module_dir

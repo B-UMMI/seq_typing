@@ -199,21 +199,21 @@ def parse_blast_output(blast_output):
                         to_change = False
                         if previous_blast_results['alignment_length'] < int(line[9]):
                             to_change = True
+                        # elif previous_blast_results['alignment_length'] == int(line[9]) and \
+                        #         previous_blast_results['gene_coverage'] <= present_blast_results['gene_coverage']:
+                        #     if previous_blast_results['gene_coverage'] < present_blast_results['gene_coverage']:
+                        #         to_change = True
                         elif previous_blast_results['alignment_length'] == int(line[9]) and \
-                                previous_blast_results['gene_coverage'] <= present_blast_results['gene_coverage']:
-                            if previous_blast_results['gene_coverage'] < present_blast_results['gene_coverage']:
+                                previous_blast_results['gene_identity'] <= float(line[10]):
+                            if previous_blast_results['gene_identity'] < float(line[10]):
                                 to_change = True
-                            elif previous_blast_results['gene_coverage'] == present_blast_results['gene_coverage'] and \
-                                    previous_blast_results['gene_identity'] <= float(line[10]):
-                                if previous_blast_results['gene_identity'] < float(line[10]):
+                            elif previous_blast_results['gene_identity'] == float(line[10]) and \
+                                    previous_blast_results['evalue'] >= float(line[8]):
+                                if previous_blast_results['evalue'] > float(line[8]):
                                     to_change = True
-                                elif previous_blast_results['gene_identity'] == float(line[10]) and \
-                                        previous_blast_results['evalue'] >= float(line[8]):
-                                    if previous_blast_results['evalue'] > float(line[8]):
-                                        to_change = True
-                                    elif previous_blast_results['evalue'] == float(line[8]) and \
-                                            previous_blast_results['gaps'] > int(line[13]):
-                                        to_change = True
+                                elif previous_blast_results['evalue'] == float(line[8]) and \
+                                        previous_blast_results['gaps'] > int(line[13]):
+                                    to_change = True
 
                         if to_change:
                             output_blast[line[2]] = present_blast_results

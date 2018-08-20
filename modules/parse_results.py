@@ -14,7 +14,7 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage):
 
     fields = ['gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for gene, rematch_results in data_by_gene.items():
-        if min_depth_coverage is not None and rematch_results['gene_mean_read_coverage'] < min_depth_coverage:
+        if rematch_results['gene_mean_read_coverage'] < min_depth_coverage:
             continue
         else:
             if rematch_results['gene_coverage'] >= min_gene_coverage:
@@ -155,7 +155,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
         writer.write(seq_type + '\n')
 
     with open(os.path.join(outdir, 'seq_typing.report_types.tab'), 'wt') as writer:
-        writer.write('\t'.join(['#sequence_type', 'type', 'reference_file', 'sequence', 'sequenced_covered',
+        writer.write('\t'.join(['#sequence_type', 'reference_file', 'type', 'sequence', 'sequenced_covered',
                                 'coverage_depth', 'sequence_identity'] + extra_blast_fields) +
                      '\n')
 

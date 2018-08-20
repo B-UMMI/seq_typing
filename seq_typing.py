@@ -270,13 +270,15 @@ def assembly_subcommand(args):
                   '\n')
         args.type = 'nucl'
         args.minGeneCoverage = config['minimum_gene_coverage']
+        args.typeSeparator = '_'
 
         print('\n'
               'Settings that will be used:\n'
               '    DB reference file: {reference}\n'
               '    Blast DB type: nucl\n'
               '    minGeneCoverage: {minGeneCoverage}\n'
-              '\n'.format(reference=args.blast, minGeneCoverage=args.minGeneCoverage))
+              '    Type separator character: {typeSeparator}'
+              '\n'.format(reference=args.blast, minGeneCoverage=args.minGeneCoverage, typeSeparator=args.typeSeparator))
 
     folders_2_remove_all = []
     references_results_all = {}
@@ -381,6 +383,7 @@ def reads_subcommand(args):
         args.minCovPresence = config['minimum_depth_presence']
         args.minCovCall = config['minimum_depth_call']
         args.minGeneCoverage = config['minimum_gene_coverage']
+        args.typeSeparator = '_'
 
         print('\n'
               'Settings that will be used:\n'
@@ -389,8 +392,10 @@ def reads_subcommand(args):
               '    minCovPresence: {minCovPresence}\n'
               '    minCovCall: {minCovCall}\n'
               '    minGeneCoverage: {minGeneCoverage}\n'
+              '    Type separator character: {typeSeparator}'
               '\n'.format(reference=args.reference, extraSeq=args.extraSeq, minCovPresence=args.minCovPresence,
-                          minCovCall=args.minCovCall, minGeneCoverage=args.minGeneCoverage))
+                          minCovCall=args.minCovCall, minGeneCoverage=args.minGeneCoverage,
+                          typeSeparator=args.typeSeparator))
 
     folders_2_remove = []
 
@@ -427,18 +432,19 @@ def main():
         sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
 
     parser = argparse.ArgumentParser(prog='seq_typing.py',
-                                     description='Determine which reference sequence is more likely to be present in a'
+                                     description='Determines which reference sequence is more likely to be present in a'
                                                  ' given sample',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--version', help='Version information', action='version', version=str('%(prog)s v' + version))
 
-    subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands', help='additional help')
+    subparsers = parser.add_subparsers(title='Subcommands', description='Valid subcommands', help='Additional help')
 
     parser_reads = subparsers.add_parser('reads', description='Run seq_typing.py using fastq files',
                                          help='reads --help')
     parser_assembly = subparsers.add_parser('assembly', description='Run seq_typing.py using a fasta file. If running'
                                                                     ' multiple samples using the same DB sequence file,'
-                                                                    ' consider use first "%(prog)s blast" module.',
+                                                                    ' consider use first "seq_typing.py blast"'
+                                                                    ' subcommand.',
                                             help='assembly --help')
     parser_blast = subparsers.add_parser('blast', description='Creates Blast DB. This is useful when running the same'
                                                               ' DB sequence file for different samples.',
@@ -459,7 +465,7 @@ def main():
                                              ' the same order that the type must be determined.')
     parser_reads_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the species with reference sequences provided together'
-                                             ' with %(prog)s for serotyping',
+                                             ' with %(prog)s for serotyping ("serotype_reference_sequences" folder)',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--species'))
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
@@ -500,7 +506,7 @@ def main():
     parser_reads_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N',
                                                help='Minimum depth of coverage of target reference sequence to'
                                                     ' consider a sequence to be present',
-                                               required=False)
+                                               required=False, default=2)
     # parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS,
     #                                            required=False, default=80)
     parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
@@ -511,7 +517,7 @@ def main():
     parser_reads_optional_general.add_argument('--doNotRemoveConsensus', action='store_true',
                                                help='Do not remove ReMatCh consensus sequences')
     parser_reads_optional_general.add_argument('--debug', action='store_true',
-                                               help='DeBug Mode: do not remove temporary files')
+                                               help='Debug mode: do not remove temporary files')
     parser_reads_optional_general.add_argument('--resume', action='store_true',
                                                help='Resume %(prog)s')
     parser_reads_optional_general.add_argument('--notClean', action='store_true',
@@ -528,18 +534,20 @@ def main():
     parser_assembly_reference.add_argument('-b', '--blast', nargs='+', type=argparse.FileType('r'),
                                            metavar='/path/to/Blast/db.sequences.file',
                                            help='Path to DB sequence file. If Blast DB was already produced only'
-                                                ' provide the one that do not end with ".n*" something (do not use for'
-                                                ' example /blast_db.sequences.fasta.nhr). If no Blast DB was found for'
+                                                ' provide the file that do not end with ".n*" something (do not use for'
+                                                ' example /blast_db.sequences.fasta.nhr). If no Blast DB is found for'
                                                 ' the DB sequence file, one will be created in --outdir. If more than'
                                                 ' one Blast DB file is passed, a type for each file will be determined.'
                                                 ' Give the files in the same order that the type must be determined.')
     parser_assembly_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                            help='Name of the species with DB sequence file provided'
                                                 ' ("serotype_reference_sequences" folder) together'
-                                                ' with %(prog)s for serotyping',
+                                                ' with seq_typing.py for serotyping',
                                            action=utils.arguments_choices_words(get_species_allowed(), '--species'))
-    parser_assembly_reference.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
-                                           help='Blast DB type (available options: %(choices)s)')
+
+    parser_assembly_optional_reference = parser_assembly.add_argument_group('General facultative options')
+    parser_assembly_optional_reference.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
+                                                    help='Blast DB type (available options: %(choices)s)')
 
     parser_assembly_optional_general = parser_assembly.add_argument_group('General facultative options')
     parser_assembly_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
@@ -562,9 +570,8 @@ def main():
     parser_assembly_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N', help=argparse.SUPPRESS,
                                                   required=False, default=1)
     parser_assembly_optional_general.add_argument('--debug', action='store_true',
-                                                  help='DeBug Mode: do not remove temporary files')
+                                                  help='Debug mode: do not remove temporary files')
     parser_assembly_optional_general.add_argument('--resume', action='store_true', help=argparse.SUPPRESS)
-    parser_assembly_optional_general.add_argument('--notClean', action='store_true', help=argparse.SUPPRESS)
 
     parser_blast_required = parser_blast.add_argument_group('Required options')
     parser_blast_required.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
@@ -578,7 +585,7 @@ def main():
     parser_blast_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the species with DB sequence file provided'
                                              ' ("serotype_reference_sequences" folder) together'
-                                             ' with %(prog)s for serotyping',
+                                             ' with seq_typing.py for serotyping',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--species'))
 
     parser_blast_optional_general = parser_blast.add_argument_group('General facultative options')
@@ -621,7 +628,7 @@ def main():
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
                                                 args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
 
-    if not args.notClean and not args.debug:
+    if not args.debug:
         for folder in folders_2_remove:
             utils.removeDirectory(folder)
 
