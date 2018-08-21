@@ -35,7 +35,7 @@ import modules.run_rematch as run_rematch
 import modules.parse_results as parse_results
 import modules.run_blast as run_blast
 
-version = '1.0'
+version = '2.0'
 
 
 def parse_config(config_file):
@@ -250,7 +250,7 @@ def assembly_subcommand(args):
         msg.append('With --blast option you must provide the --type')
 
     if len(msg) > 0:
-        argparse.ArgumentParser.error(msg)
+        argparse.ArgumentParser.error('\n'.join(msg))
 
     if args.type == 'nucl':
         utils.required_programs({'blastn': ['-version', '>=', '2.6.0']})
@@ -303,7 +303,7 @@ def blast_subcommand(args):
         msg.append('--fasta or --species must be provided')
 
     if len(msg) > 0:
-        argparse.ArgumentParser.error(msg)
+        argparse.ArgumentParser.error('\n'.join(msg))
 
     if args.type == 'nucl':
         utils.required_programs({'blastn': ['-version', '>=', '2.6.0']})
@@ -366,7 +366,7 @@ def reads_subcommand(args):
         msg.append('--reference or --species must be provided')
 
     if len(msg) > 0:
-        argparse.ArgumentParser.error(msg)
+        argparse.ArgumentParser.error('\n'.join(msg))
 
     rematch_script = include_rematch_dependencies_path()
 
