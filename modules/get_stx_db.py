@@ -98,30 +98,38 @@ def main():
                                                             '--pretty=format:"%h"', '-n', '1'], True, 15, True)
 
     # Get STX sequences
-    with open(os.path.join(args.outdir, 'virulence_db.virulence_ecoli.commit_{}.seq_typing.fasta'.format(commit)),
-              'wt', newline='\n') as writer:
-        stx_seq = {}
-        # stx_seq_write = []
-        allowed_chars = set('ATGC')
-        for seq in SeqIO.parse(os.path.join(virulencefinder_db, 'virulence_ecoli.fsa'), 'fasta'):
-            if seq.id.lower().startswith('stx'):
-                subtype = seq.id.split(':')
-                if len(subtype) == 4:
-                    if seq.id[:4] not in stx_seq:
-                        stx_seq[seq.id[:4]] = []
-                    subtype = subtype[0][:4] + subtype[3]
-                    # if subtype not in stx_seq[seq_name[3]]:
-                    #     stx_seq[seq_name[3]][subtype] = []
-                    seq.description = ''
-                    if not set(seq.seq.upper()).issubset(allowed_chars):
-                        # print(seq.id, set(seq.seq.upper()))
-                        seq.id = '{seq_name}:IUPAC_codes_removed'.format(seq_name=seq.id)
-                        seq = SeqRecord(Seq.Seq(extend_ambiguous_dna(seq.seq)[0], generic_dna),
-                                        id=seq.id, description='')
-                    seq.id = '{seq_name}:seqTyping_{subtype}'.format(seq_name=seq.id, subtype=subtype)
-                    stx_seq[seq.id[:4]].append(seq)
-                    # stx_seq_write.append(seq)
-        _ = SeqIO.write(stx_seq_write, writer, "fasta")
+    stx_seq = {}
+    # stx_seq_write = []
+    allowed_chars = set('ATGC')
+    for seq in SeqIO.parse(os.path.join(virulencefinder_db, 'virulence_ecoli.fsa'), 'fasta'):
+        if seq.id.lower().startswith('stx'):
+            subtype = seq.id.split(':')
+            if len(subtype) == 4:
+                if seq.id[:4] not in stx_seq:
+                    stx_seq[seq.id[:4]] = []
+
+                subtype = subtype[0][:4] + subtype[3]  # Define subtype
+                # if subtype not in stx_seq[seq_name[3]]:
+                #     stx_seq[seq_name[3]][subtype] = []
+                seq.description = ''  # To avoid description to be print in outfile
+
+                # For sequences with IUPAC codes, use one possible sequence based on the one with the codes
+                if not set(seq.seq.upper()).issubset(allowed_chars):
+                    # print(seq.id, set(seq.seq.upper()))
+                    seq.id = '{seq_name}:IUPAC_codes_removed'.format(seq_name=seq.id)  # Change name
+                    seq = SeqRecord(Seq.Seq(extend_ambiguous_dna(seq.seq)[0], generic_dna),
+                                    id=seq.id, description='')  # Change the sequence
+
+                seq.id = '{seq_name}:seqTyping_{subtype}'.format(seq_name=seq.id, subtype=subtype)
+                stx_seq[seq.id[:4]].append(seq)
+                # stx_seq_write.append(seq)
+
+    # Write files
+    for gene, seqs in stx_seq.items():
+        with open(os.path.join(args.outdir,
+                               'virulence_db.virulence_ecoli.commit_{commit}.{gene}.seq_typing.fasta'.format(
+                                   commit=commit, gene=gene)), 'wt', newline='\n') as writer:
+            _ = SeqIO.write(seqs, writer, "fasta")
 
     # print(len(stx_seq))
     # for gene, subtype_dict in stx_seq.items():
