@@ -7,9 +7,9 @@ seq_typing.py - Determine which reference sequence is more likely to be present
 in a given sample
 <https://github.com/B-UMMI/seq_typing/>
 
-Copyright (C) 2017 Miguel Machado <mpmachado@medicina.ulisboa.pt>
+Copyright (C) 2018 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: May 16, 2018
+Last modified: August 22, 2018
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
