@@ -10,12 +10,14 @@ Determines which reference sequence is more likely to be present in a given samp
   * [Install dependencies](#install-dependencies)
 * [Install seq_typing](#install-seq_typing)
 * [Usage](#usage)
-  * [General info](#general-info)
-    * [_reads_](#reads-module)
-    * [_blast_](#blast-module)
-    * [_assembly_](#assembly-module)
-  * [Species serotyping](#species-serotyping)
-  * [Usage examples](#usage-examples)
+  * [General use](#general-use)
+    * [General info](#general-info)
+      * [_reads_](#reads-module)
+      * [_blast_](#blast-module)
+      * [_assembly_](#assembly-module)
+    * [Species serotyping](#species-serotyping)
+    * [Usage examples](#usage-examples)
+  * [E. coli stx subtyping](#e-coli-stx-subtyping)
 * [Outputs](#outputs)
 * [Contact](#contact)
 
@@ -87,7 +89,9 @@ echo export PATH="$(pwd -P):$PATH" >> ~/.profile
 
 ## Usage
 
-### General info
+### General use
+
+#### General info
 ````
 usage: seq_typing.py [-h] [--version] {reads,assembly,blast} ...
 
@@ -108,7 +112,7 @@ Subcommands:
     blast               assembly --help
 ````
 
-#### _reads_ module  
+##### _reads_ module  
 Run seq_typing.py using fastq files
 ````
 usage: seq_typing.py reads [-h]
@@ -142,7 +146,7 @@ Required one of the following options:
   -s --species escherichia coli
                         Name of the species with reference sequences provided
                         together with seq_typing.py reads for serotyping
-                        ("serotype_reference_sequences" folder)
+                        ("reference_sequences" folder)
 
 General facultative options:
   -o --outdir /path/to/output/directory/
@@ -174,7 +178,7 @@ General facultative options:
   --resume              Resume seq_typing.py reads
 ````
 
-#### _blast_ module  
+##### _blast_ module  
 Creates Blast DB.  
 This is useful when running the same DB sequence file for different samples.
 ````
@@ -198,7 +202,7 @@ Required one of the following options:
                         passed, a Blast DB for each file will be created.
   -s --species escherichia coli
                         Name of the species with DB sequence file provided
-                        ("serotype_reference_sequences" folder) together with
+                        ("reference_sequences" folder) together with
                         seq_typing.py for serotyping
 
 General facultative options:
@@ -207,7 +211,7 @@ General facultative options:
                         stored (default: ./)
 ````
 
-#### _assembly_ module  
+##### _assembly_ module  
 Run seq_typing.py using a fasta file.  
 If running multiple samples using the same DB sequence file, consider use first _seq_typing.py blast_ module.
 ````
@@ -242,7 +246,7 @@ Required one of the following options:
                         in the same order that the type must be determined.
   -s --species escherichia coli
                         Name of the species with DB sequence file provided
-                        ("serotype_reference_sequences" folder) together with
+                        ("reference_sequences" folder) together with
                         seq_typing.py for serotyping
 
 Required option for --blast:
@@ -264,7 +268,7 @@ General facultative options:
   --debug               Debug mode: do not remove temporary files
 ````
 
-### Species serotyping
+#### Species serotyping
 
 For the following species, references sequences are provided for serotyping.
 * Escherichia coli
@@ -273,7 +277,7 @@ For the following species, references sequences are provided for serotyping.
 
 Use `--species` option with one of those species
 
-### Usage examples
+#### Usage examples
 
 Serotyping _Haemophilus influenzae_ using provided references sequences (that uses only one reference sequences file):
 ````bash
@@ -309,6 +313,8 @@ seq_typing.py --reference references/Ecoli/O_type.fasta references/Ecoli/H_type.
               --threads 2 \
               --mapRefTogether
 ````
+
+### E. coli stx subtyping
 
 ## Outputs
 

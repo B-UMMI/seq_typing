@@ -91,7 +91,7 @@ def get_fasta_config(species):
     config = None
 
     file_path = os.path.abspath(__file__)
-    species_folder = os.path.join(os.path.dirname(file_path), 'serotyping_reference_sequences', '_'.join(species), '')
+    species_folder = os.path.join(os.path.dirname(file_path), 'reference_sequences', '_'.join(species), '')
 
     files = [f for f in os.listdir(species_folder) if not f.startswith('.') and
              os.path.isfile(os.path.join(species_folder, f))]
@@ -116,7 +116,7 @@ def get_species_allowed():
     """
 
     file_path = os.path.abspath(__file__)
-    serotyping_folder = os.path.join(os.path.dirname(file_path), 'serotyping_reference_sequences', '')
+    serotyping_folder = os.path.join(os.path.dirname(file_path), 'reference_sequences', '')
     species = [d.replace('_', ' ') for d in os.listdir(serotyping_folder) if not d.startswith('.') and
                os.path.isdir(os.path.join(serotyping_folder, d))]
     return species
@@ -427,10 +427,7 @@ def reads_subcommand(args):
     return folders_2_remove, references_results, args.reference, references_headers
 
 
-def main():
-    if sys.version_info[0] < 3:
-        sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
-
+def python_arguments():
     parser = argparse.ArgumentParser(prog='seq_typing.py',
                                      description='Determines which reference sequence is more likely to be present in a'
                                                  ' given sample',
@@ -465,7 +462,7 @@ def main():
                                              ' the same order that the type must be determined.')
     parser_reads_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the species with reference sequences provided together'
-                                             ' with %(prog)s for serotyping ("serotype_reference_sequences" folder)',
+                                             ' with %(prog)s for serotyping ("reference_sequences" folder)',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--species'))
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
@@ -541,7 +538,7 @@ def main():
                                                 ' Give the files in the same order that the type must be determined.')
     parser_assembly_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                            help='Name of the species with DB sequence file provided'
-                                                ' ("serotype_reference_sequences" folder) together'
+                                                ' ("reference_sequences" folder) together'
                                                 ' with seq_typing.py for serotyping',
                                            action=utils.arguments_choices_words(get_species_allowed(), '--species'))
 
@@ -584,7 +581,7 @@ def main():
                                              ' each file will be created.')
     parser_blast_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the species with DB sequence file provided'
-                                             ' ("serotype_reference_sequences" folder) together'
+                                             ' ("reference_sequences" folder) together'
                                              ' with seq_typing.py for serotyping',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--species'))
 
@@ -597,6 +594,14 @@ def main():
     parser_assembly.set_defaults(func=assembly_subcommand)
     parser_blast.set_defaults(func=blast_subcommand)
 
+    return parser, parser_reads, parser_assembly, parser_blast
+
+
+def main():
+    if sys.version_info[0] < 3:
+        sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
+
+    parser, _, _, _ = python_arguments()
     args = parser.parse_args()
 
     start_time = time.time()
@@ -632,8 +637,7 @@ def main():
         for folder in folders_2_remove:
             utils.removeDirectory(folder)
 
-    time_taken = utils.runTime(start_time)
-    del time_taken
+    _ = utils.runTime(start_time)
 
 
 if __name__ == "__main__":

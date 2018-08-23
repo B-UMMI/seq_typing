@@ -3,7 +3,7 @@
 # -*- coding: utf-8 -*-
 
 """
-get_stx_db.py - Get STX sequences from virulencefinder_db to produce a STX subtyping DB
+get_stx_db.py - Gets STX sequences from virulencefinder_db to produce a STX subtyping DB
 <https://github.com/B-UMMI/seq_typing/modules/>
 
 Copyright (C) 2018 Miguel Machado <mpmachado@medicina.ulisboa.pt>
@@ -75,7 +75,7 @@ def main():
         sys.exit('Must be using Python 3. Try calling "python3 get_stx_db.py"')
 
     parser = argparse.ArgumentParser(prog='get_stx_db.py',
-                                     description='Get STX sequences from virulencefinder_db to produce a STX subtyping'
+                                     description='Gets STX sequences from virulencefinder_db to produce a STX subtyping'
                                                  ' DB',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--version', help='Version information', action='version', version=str('%(prog)s v' + version))
@@ -125,7 +125,7 @@ def main():
                         # print(seq.id, set(seq.seq.upper()))
                         all_possible_sequences = extend_ambiguous_dna(seq.seq.upper())
                         if all_possible_sequences is not None:
-                            seq = SeqRecord(Seq.Seq(all_possible_sequences, generic_dna),
+                            seq = SeqRecord(Seq.Seq(all_possible_sequences[0], generic_dna),
                                             id='{seq_name}:IUPAC_codes_removed'.format(seq_name=seq.id),
                                             description='')  # Change the sequence
                         else:
