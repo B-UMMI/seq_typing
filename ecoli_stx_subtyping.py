@@ -3,7 +3,7 @@
 # -*- coding: utf-8 -*-
 
 """
-ecoli_stx_subtyping.py - Gets E. coli subtypes
+ecoli_stx_subtyping.py - Gets E. coli stx subtypes
 <https://github.com/B-UMMI/seq_typing/modules/>
 
 Copyright (C) 2018 Miguel Machado <mpmachado@medicina.ulisboa.pt>
@@ -102,14 +102,14 @@ def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, s
 
 def main():
     if sys.version_info[0] < 3:
-        sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
+        sys.exit('Must be using Python 3. Try calling "python3 ecoli_stx_subtyping.py"')
 
     sys.path.append('..')
     from seq_typing import python_arguments
 
     parser, parser_reads, parser_assembly, parser_blast = python_arguments()
     parser.prog = 'ecoli_stx_subtyping.py'
-    parser.description = 'Gets E. coli subtypes'
+    parser.description = 'Gets E. coli stx subtypes'
 
     # Add specific arguments
     parser_reads.add_argument('--stx2covered', type=float,
@@ -164,7 +164,7 @@ def main():
                                                 args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
 
     stx1_result, stx2_result = stx_subtype_parser(
-        os.path.join(args.outdir, 'seq_typing.report_types.tab'),
+        os.path.join(args.outdir, 'seq_typing.ecoli_stx_subtyping.report_types.tab'),
         [ref_file for ref_file in reference if 'stx1' in os.path.basename(ref_file).lower()][0],
         [ref_file for ref_file in reference if 'stx2' in os.path.basename(ref_file).lower()][0],
         args.stx2covered, args.stx2identity)

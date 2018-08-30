@@ -148,9 +148,11 @@ def scriptVersionGit(version, directory, script_path):
         command = ['git', 'remote', 'show', 'origin']
         run_successfully, stdout, stderr = runCommandPopenCommunicate(command, False, 15, False)
         print(stdout)
-        os.chdir(directory)
     except:
-        print('HARMLESS WARNING: git command possibly not found. The GitHub repository information will not be obtained.')
+        print('HARMLESS WARNING: git command possibly not found. The GitHub repository information will not be'
+              ' obtained.')
+    finally:
+        os.chdir(directory)
 
 
 def runTime(start_time):

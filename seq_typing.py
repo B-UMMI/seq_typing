@@ -244,8 +244,8 @@ def assembly_subcommand(args):
         msg.append('--minGeneCoverage should be a value between [0, 100]')
     if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
         msg.append('--minGeneIdentity should be a value between [0, 100]')
-    if args.blast is None and args.species is None:
-        msg.append('--blast or --species must be provided')
+    if args.blast is None and args.org is None:
+        msg.append('--blast or --org must be provided')
     if args.blast is not None and args.type is None:
         msg.append('With --blast option you must provide the --type')
 
@@ -261,7 +261,7 @@ def assembly_subcommand(args):
     if args.blast is not None:
         args.blast = [blast.name for blast in args.blast]
     else:
-        args.blast, config = get_fasta_config(args.species)
+        args.blast, config = get_fasta_config(args.org)
         config = parse_config(config)
         if args.type != 'nucl':
             print('\n'
@@ -299,8 +299,8 @@ def blast_subcommand(args):
     msg = []
     if args.fasta is not None and args.type is None:
         msg.append('With --fasta option you must provide the --type')
-    if args.fasta is None and args.species is None:
-        msg.append('--fasta or --species must be provided')
+    if args.fasta is None and args.org is None:
+        msg.append('--fasta or --org must be provided')
 
     if len(msg) > 0:
         argparse.ArgumentParser.error('\n'.join(msg))
@@ -313,7 +313,7 @@ def blast_subcommand(args):
     if args.fasta is not None:
         args.fasta = [fasta.name for fasta in args.fasta]
     else:
-        args.fasta, _ = get_fasta_config(args.species)
+        args.fasta, _ = get_fasta_config(args.org)
         if args.type != 'nucl':
             print('\n'
                   'ATTENTION: Blast DB type provided was not "nucl"'
@@ -362,8 +362,8 @@ def reads_subcommand(args):
         msg.append('--minGeneCoverage should be a value between [0, 100]')
     if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
         msg.append('--minGeneIdentity should be a value between [0, 100]')
-    if args.reference is None and args.species is None:
-        msg.append('--reference or --species must be provided')
+    if args.reference is None and args.org is None:
+        msg.append('--reference or --org must be provided')
 
     if len(msg) > 0:
         argparse.ArgumentParser.error('\n'.join(msg))
@@ -377,7 +377,7 @@ def reads_subcommand(args):
     if args.reference is not None:
         args.reference = [reference.name for reference in args.reference]
     else:
-        args.reference, config = get_fasta_config(args.species)
+        args.reference, config = get_fasta_config(args.org)
         config = parse_config(config)
         args.extraSeq = config['length_extra_seq']
         args.minCovPresence = config['minimum_depth_presence']
@@ -460,10 +460,10 @@ def python_arguments():
                                         help='Fasta file containing reference sequences. If more than one file is'
                                              ' passed, a type for each file will be determined. Give the files name in'
                                              ' the same order that the type must be determined.')
-    parser_reads_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                        help='Name of the species with reference sequences provided together'
-                                             ' with %(prog)s for serotyping ("reference_sequences" folder)',
-                                        action=utils.arguments_choices_words(get_species_allowed(), '--species'))
+    parser_reads_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
+                                        help='Name of the organism with reference sequences provided together'
+                                             ' with %(prog)s for typing ("reference_sequences" folder)',
+                                        action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
     parser_reads_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
@@ -536,11 +536,11 @@ def python_arguments():
                                                 ' the DB sequence file, one will be created in --outdir. If more than'
                                                 ' one Blast DB file is passed, a type for each file will be determined.'
                                                 ' Give the files in the same order that the type must be determined.')
-    parser_assembly_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                           help='Name of the species with DB sequence file provided'
+    parser_assembly_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
+                                           help='Name of the organism with DB sequence file provided'
                                                 ' ("reference_sequences" folder) together'
-                                                ' with seq_typing.py for serotyping',
-                                           action=utils.arguments_choices_words(get_species_allowed(), '--species'))
+                                                ' with seq_typing.py for typing',
+                                           action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
     parser_assembly_optional_reference = parser_assembly.add_argument_group('General facultative options')
     parser_assembly_optional_reference.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
@@ -579,11 +579,11 @@ def python_arguments():
                                         metavar='/path/to/db.sequences.fasta',
                                         help='Path to DB sequence file. If more than one file is passed, a Blast DB for'
                                              ' each file will be created.')
-    parser_blast_reference.add_argument('-s', '--species', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                        help='Name of the species with DB sequence file provided'
+    parser_blast_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
+                                        help='Name of the organism with DB sequence file provided'
                                              ' ("reference_sequences" folder) together'
-                                             ' with seq_typing.py for serotyping',
-                                        action=utils.arguments_choices_words(get_species_allowed(), '--species'))
+                                             ' with seq_typing.py for typing',
+                                        action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
     parser_blast_optional_general = parser_blast.add_argument_group('General facultative options')
     parser_blast_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',

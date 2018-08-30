@@ -12,11 +12,13 @@ Determines which reference sequence is more likely to be present in a given samp
 * [Usage](#usage)
   * [General use](#general-use)
     * [General info](#general-info)
-      * [_reads_](#reads-module)
-      * [_blast_](#blast-module)
-      * [_assembly_](#assembly-module)
-    * [Species serotyping](#species-serotyping)
+      * [_reads_ module](#reads-module)
+      * [_blast_ module](#blast-module)
+      * [_assembly_ module](#assembly-module)
+    * [Organisms typing](#organisms-typing)
     * [Usage examples](#usage-examples)
+      * [Reads](#reads)
+      * [Assemblies](#assemblies)
   * [E. coli stx subtyping](#e-coli-stx-subtyping)
 * [Outputs](#outputs)
 * [Contact](#contact)
@@ -111,13 +113,19 @@ Subcommands:
     assembly            assembly --help
     blast               assembly --help
 ````
+* [_reads_ module](#reads-module):  
+  Run seq_typing.py using fastq files.
+* [_blast_ module](#blast-module):  
+  Creates Blast DB. This is useful when running the same DB sequence file for different samples.
+* [_assembly_ module](#assembly-module):  
+  Run seq_typing.py using a fasta file. If running multiple samples using the same DB sequence file, consider use first _seq_typing.py blast_ module.
 
 ##### _reads_ module  
-Run seq_typing.py using fastq files
+Run seq_typing.py using fastq files.
 ````
 usage: seq_typing.py reads [-h]
                            -f /path/to/input/file.fq.gz ...
-                           -r /path/to/reference_sequence.fasta ... | -s escherichia coli
+                           -r /path/to/reference_sequence.fasta ... | --org escherichia coli
                            [-o /path/to/output/directory/] [-j N]
                            [--mapRefTogether] [--typeSeparator _]
                            [--extraSeq N] [--minCovPresence N]
@@ -143,9 +151,9 @@ Required one of the following options:
                         than one file is passed, a type for each file will be
                         determined. Give the files name in the same order that
                         the type must be determined.
-  -s --species escherichia coli
-                        Name of the species with reference sequences provided
-                        together with seq_typing.py reads for serotyping
+  --org escherichia coli
+                        Name of the organism with reference sequences provided
+                        together with seq_typing.py reads for typing
                         ("reference_sequences" folder)
 
 General facultative options:
@@ -184,7 +192,7 @@ This is useful when running the same DB sequence file for different samples.
 ````
 usage: seq_typing.py blast [-h]
                            -t nucl
-                           -f /path/to/db.sequences.fasta ... | -s escherichia coli
+                           -f /path/to/db.sequences.fasta ... | --org escherichia coli
                            [-o /path/to/output/directory/]
 
 Creates Blast DB. This is useful when running the same DB sequence file for
@@ -193,17 +201,17 @@ different samples.
 optional arguments:
   -h, --help            show this help message and exit
 
-Required options:
-  -t nucl, --type nucl  Blast DB type (available options: nucl, prot)
-
 Required one of the following options:
   -f --fasta /path/to/db.sequences.fasta ...
                         Path to DB sequence file. If more than one file is
                         passed, a Blast DB for each file will be created.
-  -s --species escherichia coli
-                        Name of the species with DB sequence file provided
+  --org escherichia coli
+                        Name of the organism with DB sequence file provided
                         ("reference_sequences" folder) together with
-                        seq_typing.py for serotyping
+                        seq_typing.py for typing
+
+Required option for --fasta:
+  -t nucl, --type nucl  Blast DB type (available options: nucl, prot)
 
 General facultative options:
   -o --outdir /path/to/output/directory/
@@ -217,7 +225,7 @@ If running multiple samples using the same DB sequence file, consider use first 
 ````
 usage: seq_typing.py assembly [-h]
                               -f /path/to/query/assembly_file.fasta
-                              -b /path/to/Blast/db.sequences.file ... -t nucl | -s escherichia coli
+                              -b /path/to/Blast/db.sequences.file ... -t nucl | --org escherichia coli
                               [-o /path/to/output/directory/] [-j N]
                               [--typeSeparator _] [--minGeneCoverage N]
                               [--minGeneIdentity N] [--debug]
@@ -244,10 +252,10 @@ Required one of the following options:
                         --outdir. If more than one Blast DB file is passed, a
                         type for each file will be determined. Give the files
                         in the same order that the type must be determined.
-  -s --species escherichia coli
-                        Name of the species with DB sequence file provided
+  --org escherichia coli
+                        Name of the organism with DB sequence file provided
                         ("reference_sequences" folder) together with
-                        seq_typing.py for serotyping
+                        seq_typing.py for typing
 
 Required option for --blast:
   -t --type nucl        Blast DB type (available options: nucl, prot)
@@ -268,51 +276,69 @@ General facultative options:
   --debug               Debug mode: do not remove temporary files
 ````
 
-#### Species serotyping
+#### Organisms typing
 
-For the following species, references sequences are provided for serotyping.
+For the following organisms, references sequences are provided for serotyping.
 * Escherichia coli
 * Haemophilus influenzae
 * Streptococcus agalactiae
+* Dengue virus (with genotype information)
 
-Use `--species` option with one of those species
+Use `--org` option with one of those organisms
 
 #### Usage examples
 
+##### Reads
+
 Serotyping _Haemophilus influenzae_ using provided references sequences (that uses only one reference sequences file):
 ````bash
-# Activate Conda environment (when using Python via Conda)
+# Activate Conda environment (when using Python via Conda environment)
 source activate seq_typing
 
-seq_typing.py --species Haemophilus influenzae \
-              --fastq sample_1.fq.gz sample_2.fq.gz \
-              --outdir sample_out/ \
-              --threads 2
+seq_typing.py reads --org Haemophilus influenzae \
+                    --fastq sample_1.fq.gz sample_2.fq.gz \
+                    --outdir sample_out/ \
+                    --threads 2
 ````
 
 Serotyping _Escherichia coli_ using provided references sequences (that uses two reference sequences files):
 ````bash
-# Activate Conda environment (when using Python via Conda)
+# Activate Conda environment (when using Python via Conda environment)
 source activate seq_typing
 
-seq_typing.py --species Escherichia coli \
-              --fastq sample_1.fq.gz sample_2.fq.gz \
-              --outdir sample_out/ \
-              --threads 2 \
-              --mapRefTogether
+seq_typing.py reads --org Escherichia coli \
+                    --fastq sample_1.fq.gz sample_2.fq.gz \
+                    --outdir sample_out/ \
+                    --threads 2 \
+                    --mapRefTogether
 ````
 
-Type one sample with a given set of references sequences:
+Type one sample with a given set of references sequences (using for example single-end reads):
 ````bash
-# Activate Conda environment (when using Python via Conda)
+# Activate Conda environment (when using Python via Conda environment)
 source activate seq_typing
 
-seq_typing.py --reference references/Ecoli/O_type.fasta references/Ecoli/H_type.fasta \
-              --fastq sample_1.fq.gz sample_2.fq.gz \
-              --outdir sample_out/ \
-              --threads 2 \
-              --mapRefTogether
+seq_typing.py reads --reference references/Ecoli/O_type.fasta references/Ecoli/H_type.fasta \
+                    --fastq sample.fq.gz \
+                    --outdir sample_out/ \
+                    --threads 2 \
+                    --mapRefTogether
 ````
+
+##### Assemblies
+
+Type _Dengue virus_ using assemblies with provided reference sequences (uses only one reference sequences file):
+````bash
+# Activate Conda environment (when using Python via Conda environment)
+source activate seq_typing
+
+seq_typing.py assembly --org Dengue virus \
+                       --fasta sample.fasta \
+                       --outdir sample_out/ \
+                       --threads 2
+````
+
+When running the same database for different samples, a single Blast database should be produce to 
 
 ### E. coli stx subtyping
 
