@@ -268,7 +268,6 @@ def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
 
         db_exists = create_blast_db(blast_db_path, blast_db, blast_type)
         if db_exists:
-            print('>>>d')
             blast_db_path = str(blast_db)
             original_file = True
     elif db_exists and not original_file:
