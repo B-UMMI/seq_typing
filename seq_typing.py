@@ -240,10 +240,6 @@ def prepare_references(references, map_ref_together, references_dir):
 
 def assembly_subcommand(args):
     msg = []
-    if args.minGeneCoverage is not None and (args.minGeneCoverage < 0 or args.minGeneCoverage > 100):
-        msg.append('--minGeneCoverage should be a value between [0, 100]')
-    if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
-        msg.append('--minGeneIdentity should be a value between [0, 100]')
     if args.blast is None and args.org is None:
         msg.append('--blast or --org must be provided')
     if args.blast is not None and args.type is None:
@@ -357,16 +353,8 @@ def blast_subcommand(args):
 
 
 def reads_subcommand(args):
-    msg = []
-    if args.minGeneCoverage is not None and (args.minGeneCoverage < 0 or args.minGeneCoverage > 100):
-        msg.append('--minGeneCoverage should be a value between [0, 100]')
-    if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
-        msg.append('--minGeneIdentity should be a value between [0, 100]')
     if args.reference is None and args.org is None:
-        msg.append('--reference or --org must be provided')
-
-    if len(msg) > 0:
-        argparse.ArgumentParser.error('\n'.join(msg))
+        argparse.ArgumentParser.error('--reference or --org must be provided')
 
     rematch_script = include_rematch_dependencies_path()
 
@@ -427,25 +415,48 @@ def reads_subcommand(args):
     return folders_2_remove, references_results, args.reference, references_headers
 
 
-def python_arguments():
-    parser = argparse.ArgumentParser(prog='seq_typing.py',
+def python_arguments(program_name):
+    """
+    Sets pythons arguments
+
+    Parameters
+    ----------
+    program_name : str
+        String with the name of the program
+
+    Returns
+    -------
+    parser : argparse.ArgumentParser
+        General argparse
+    parser_reads : argparse.ArgumentParser.add_subparsers.add_parser
+        Reads subparser
+        For running the program using fastq files
+    parser_assembly : argparse.ArgumentParser.add_subparsers.add_parser
+        Assembly subparser
+        For running the program using a fasta file
+    parser_blast : argparse.ArgumentParser.add_subparsers.add_parser
+        Blast subparser
+        For creating Blast DB
+    """
+    parser = argparse.ArgumentParser(prog=program_name,
                                      description='Determines which reference sequence is more likely to be present in a'
                                                  ' given sample',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--version', help='Version information', action='version', version=str('%(prog)s v' + version))
+    parser.add_argument('--version', help='Version information', action='version',
+                        version='{prog} v{version}'.format(prog=parser.prog, version=version))
 
     subparsers = parser.add_subparsers(title='Subcommands', description='Valid subcommands', help='Additional help')
 
-    parser_reads = subparsers.add_parser('reads', description='Run seq_typing.py using fastq files',
+    parser_reads = subparsers.add_parser('reads', description='Run {} using fastq files.'.format(parser.prog),
                                          help='reads --help')
-    parser_assembly = subparsers.add_parser('assembly', description='Run seq_typing.py using a fasta file. If running'
+    parser_assembly = subparsers.add_parser('assembly', description='Run {prog} using a fasta file. If running'
                                                                     ' multiple samples using the same DB sequence file,'
-                                                                    ' consider use first "seq_typing.py blast"'
-                                                                    ' subcommand.',
+                                                                    ' consider use first "{prog} blast"'
+                                                                    ' subcommand.'.format(prog=parser.prog),
                                             help='assembly --help')
     parser_blast = subparsers.add_parser('blast', description='Creates Blast DB. This is useful when running the same'
                                                               ' DB sequence file for different samples.',
-                                         help='assembly --help')
+                                         help='blast --help')
 
     parser_reads_required = parser_reads.add_argument_group('Required options')
     parser_reads_required.add_argument('-f', '--fastq', nargs='+', action=utils.required_length((1, 2), '--fastq'),
@@ -462,7 +473,7 @@ def python_arguments():
                                              ' the same order that the type must be determined.')
     parser_reads_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the organism with reference sequences provided together'
-                                             ' with %(prog)s for typing ("reference_sequences" folder)',
+                                             ' with {} for typing ("reference_sequences" folder)'.format(parser.prog),
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
@@ -601,8 +612,17 @@ def main():
     if sys.version_info[0] < 3:
         sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
 
-    parser, _, _, _ = python_arguments()
+    parser, _, _, _ = python_arguments('seq_typing.py')
     args = parser.parse_args()
+
+    msg = []
+    if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
+        msg.append('--minGeneCoverage should be a value between [0, 100]')
+    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
+        msg.append('--minGeneIdentity should be a value between [0, 100]')
+
+    if len(msg) > 0:
+        argparse.ArgumentParser.error('\n'.join(msg))
 
     start_time = time.time()
 

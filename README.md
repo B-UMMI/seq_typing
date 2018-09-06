@@ -20,12 +20,14 @@ Determines which reference sequence is more likely to be present in a given samp
       * [Reads](#reads)
       * [Assemblies](#assemblies)
   * [E. coli stx subtyping](#e-coli-stx-subtyping)
+    * [General usage](#general-usage)
+    * [Update stx references](#update-stx-references)
 * [Outputs](#outputs)
 * [Contact](#contact)
 
 ## Rational
 
-**seq_typing** is a software to determine a given sample type using a read mapping approach or sequence BLAST search against a set of reference sequences. The sample's reads are mapped to the given reference sequences and, based on the length of the sequence covered and it's depth of coverage, **seq_typing** decides which reference sequence is the most likely to be present, and returns the type associated with such sequence. When using sequences fasta files, similar decision rules are applied, but results are first cleaned to get the best hit for each DB sequence (based on alignment length, similarity, E-value and number of gaps).
+**seq_typing** is a software to determine a given sample type using a read mapping approach or sequence Blast search against a set of reference sequences. The sample's reads are mapped to the given reference sequences and, based on the length of the sequence covered and it's depth of coverage, **seq_typing** decides which reference sequence is the most likely to be present, and returns the type associated with such sequence. When using sequences fasta files, similar decision rules are applied, but results are first cleaned to get the best hit for each DB sequence (based on alignment length, similarity, E-value and number of gaps).
 
 ## Requirements
 
@@ -111,7 +113,7 @@ Subcommands:
                         Additional help
     reads               reads --help
     assembly            assembly --help
-    blast               assembly --help
+    blast               blast --help
 ```
 * [_reads_ module](#reads-module):  
   Run seq_typing.py using fastq files.
@@ -153,7 +155,7 @@ Required one of the following options:
                         the type must be determined.
   --org escherichia coli
                         Name of the organism with reference sequences provided
-                        together with seq_typing.py reads for typing
+                        together with seq_typing.py for typing
                         ("reference_sequences" folder)
 
 General facultative options:
@@ -266,7 +268,7 @@ General facultative options:
                         stored (default: ./)
   -j --threads N        Number of threads to use (default: 1)
   --typeSeparator _     Last single character separating the general sequence
-                        header from the last part containing the type
+                        header from the last part containing the type (default: _)
   --minGeneCoverage N   Minimum percentage of target reference sequence
                         covered to consider a sequence to be present (value
                         between [0, 100]) (default: 60)
@@ -369,7 +371,7 @@ seq_typing.py assembly --blast references/O_type.fasta references/H_type.fasta \
                        --threads 2
 ```
 
-Run **seq_typing** with a preliminary step for reference DB construction (useful when running multiple samples with the sample reference sequences file):
+Run **seq_typing** with a preliminary step for reference DB construction (useful when running multiple samples with the same reference sequences file):
 ```bash
 # Preliminary step for reference DB construction.
 seq_typing.py blast --blast references/O_type.fasta references/H_type.fasta \
@@ -384,6 +386,168 @@ seq_typing.py assembly --blast db_out/O_type.fasta db_out/H_type.fasta \
 ```
 
 ### E. coli stx subtyping
+
+A specific script was created for _E. coli_ _stx_ subtyping (**ecoli_stx_subtyping.py**) in order to accommodate the possible existence of _stx2_ paralogs.  
+It works very similar to **seq_typing.py**.
+
+#### General usage
+```
+usage: ecoli_stx_subtyping.py [-h] [--version] {reads,assembly,blast} ...
+
+Gets E. coli stx subtypes
+
+optional arguments:
+  -h, --help            Show this help message and exit
+  --version             Version information
+
+Subcommands:
+  Valid subcommands
+
+  {reads,assembly}
+                        Additional help
+    reads               reads --help
+    assembly            assembly --help
+```
+
+**READS**  
+Run _ecoli_stx_subtyping.py_ using fastq files.
+```
+usage: ecoli_stx_subtyping.py reads [-h]
+                                    -f /path/to/input/file.fq.gz ...
+                                    -r /path/to/reference_sequence.fasta ... | --org stx subtyping
+                                    [--stx2covered N] [--stx2identity N]
+                                    [-o /path/to/output/directory/] [-j N]
+                                    [--mapRefTogether] [--typeSeparator _]
+                                    [--extraSeq N] [--minCovPresence N]
+                                    [--minCovCall N] [--minGeneCoverage N]
+                                    [--minDepthCoverage N] [--minGeneIdentity N]
+                                    [--doNotRemoveConsensus] [--debug] [--resume]
+                                    [--notClean]
+
+Run ecoli_stx_subtyping.py using fastq files
+
+optional arguments:
+  -h, --help            show this help message and exit
+
+Required options:
+  -f --fastq /path/to/input/file.fq.gz ...
+                        Path to single OR paired-end fastq files. If two files
+                        are passed, they will be assumed as being the paired
+                        fastq files
+
+Required one of the following options:
+  -r --reference 1_virulence_db.stx1_subtyping.fasta 2_virulence_db.stx2_subtyping.fasta
+                        Path to stx subtyping reference sequences (if not want to use
+                        the ones provided together with seq_typing.py)
+  --org stx subtyping   To use stx subtyping reference sequences provided
+                        together with seq_typing.py
+
+ecoli_stx_subtyping specific facultative options:
+  --stx2covered 95      Minimal percentage of sequence covered to consider
+                        extra stx2 subtypes (value between [0, 100]) (default: 100)
+  --stx2identity 95     Minimal sequence identity to consider extra stx2
+                        subtypes (value between [0, 100]) (default: 100)
+
+General facultative options:
+  -o --outdir /path/to/output/directory/
+                        Path to the directory where the information will be
+                        stored (default: ./)
+  -j --threads N        Number of threads to use (default: 1)
+  --mapRefTogether      Map the reads against all references together
+  --typeSeparator _     Last single character separating the general sequence
+                        header from the last part containing the type (default: _)
+  --extraSeq N          Sequence length added to both ends of target sequences
+                        (usefull to improve reads mapping to the target one)
+                        that will be trimmed in ReMatCh outputs (default: 0)
+  --minCovPresence N    Reference position minimum coverage depth to consider
+                        the position to be present in the sample (default: 5)
+  --minCovCall N        Reference position minimum coverage depth to perform a
+                        base call (default: 10)
+  --minGeneCoverage N   Minimum percentage of target reference sequence
+                        covered to consider a sequence to be present (value
+                        between [0, 100]) (default: 60)
+  --minDepthCoverage N  Minimum depth of coverage of target reference sequence
+                        to consider a sequence to be present (default: 2)
+  --minGeneIdentity N   Minimum percentage of identity of reference sequence
+                        covered to consider a gene to be present (value
+                        between [0, 100]). One INDEL will be considered as one
+                        difference (default: 80)
+  --doNotRemoveConsensus
+                        Do not remove ReMatCh consensus sequences
+  --debug               Debug mode: do not remove temporary files
+  --resume              Resume ecoli_stx_subtyping.py reads
+```
+
+**ASSEMBLY**  
+Run _ecoli_stx_subtyping_ using a fasta file.
+```
+usage: ecoli_stx_subtyping.py assembly [-h]
+                                       -f /path/to/query/assembly_file.fasta
+                                       -b /path/to/Blast/db.sequences.file ... -t nucl | --org stx subtyping
+                                       [--stx2covered N] [--stx2identity N]
+                                       [-o /path/to/output/directory/] [-j N]
+                                       [--typeSeparator _] [--minGeneCoverage N]
+                                       [--minGeneIdentity N] [--debug]
+
+Run ecoli_stx_subtyping.py using a fasta file. If running multiple samples using the
+same DB sequence file, consider use first "seq_typing.py blast"
+module.
+
+optional arguments:
+  -h, --help            show this help message and exit
+
+Required options:
+  -f /path/to/query/assembly_file.fasta, --fasta /path/to/query/assembly_file.fasta
+                        Path to fasta file containing the query sequences from
+                        which the stx subtypes should be assessed
+
+Required one of the following options:
+  -b --blast 1_virulence_db.stx1_subtyping.fasta 2_virulence_db.stx2_subtyping.fasta
+                        Path to stx subtyping DB sequence file (if not want to use
+                        the ones provided together with seq_typing.py).
+                        If Blast DB was already produced (using "seq_typing.py blast"
+                        module) only provide the file that do not end with ".n*"
+                        something (do not use for example
+                        /blast_db.sequences.fasta.nhr). If no Blast DB is
+                        found for the DB sequence file, one will be created in
+                        --outdir. If more than one Blast DB file is passed, a
+                        type for each file will be determined. Give the files
+                        in the same order that the type must be determined.
+  --org stx subtyping   To use stx subtyping reference sequences provided
+                        together with seq_typing.py
+
+Required option for --blast:
+  -t --type nucl        Blast DB type (available options: nucl, prot)
+
+ecoli_stx_subtyping specific facultative options:
+  --stx2covered 95      Minimal percentage of sequence covered to consider
+                        extra stx2 subtypes (value between [0, 100]) (default: 100)
+  --stx2identity 95     Minimal sequence identity to consider extra stx2
+                        subtypes (value between [0, 100]) (default: 100)
+
+General facultative options:
+  -o --outdir /path/to/output/directory/
+                        Path to the directory where the information will be
+                        stored (default: ./)
+  -j --threads N        Number of threads to use (default: 1)
+  --typeSeparator _     Last single character separating the general sequence
+                        header from the last part containing the type (default: _)
+  --minGeneCoverage N   Minimum percentage of target reference sequence
+                        covered to consider a sequence to be present (value
+                        between [0, 100]) (default: 60)
+  --minGeneIdentity N   Minimum percentage of identity of reference sequence
+                        covered to consider a gene to be present (value
+                        between [0, 100]) (default: 80)
+  --debug               Debug mode: do not remove temporary files
+```
+
+**BLAST**  
+To construct stx subtypes Blast DB, proceed as described [here](#assemblies):  
+`seq_typing.py blast --org stx subtyping`.
+
+#### Update stx references
+
+
 
 ## Outputs
 

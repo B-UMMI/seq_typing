@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import os.path
 import time
+import argparse
 
 from modules import utils
 from modules import parse_results
@@ -107,32 +108,46 @@ def main():
     sys.path.append('..')
     from seq_typing import python_arguments
 
-    parser, parser_reads, parser_assembly, parser_blast = python_arguments()
-    parser.prog = 'ecoli_stx_subtyping.py'
+    parser, parser_reads, parser_assembly, parser_blast = python_arguments('ecoli_stx_subtyping.py')
     parser.description = 'Gets E. coli stx subtypes'
 
     # Add specific arguments
     parser_reads.add_argument('--stx2covered', type=float,
                               metavar='95',
                               help='Minimal percentage of sequence covered to consider extra stx2'
-                                   ' subtypes',
+                                   ' subtypes (value between [0, 100])',
                               required=False, default=100)
     parser_reads.add_argument('--stx2identity', type=float,
                               metavar='95',
-                              help='Minimal sequence identity to consider extra stx2 subtypes',
+                              help='Minimal sequence identity to consider extra stx2'
+                                   ' subtypes (value between [0, 100])',
                               required=False, default=100)
 
     parser_assembly.add_argument('--stx2covered', type=float,
                                  metavar='95',
                                  help='Minimal percentage of sequence covered to consider extra stx2'
-                                      ' subtypes',
+                                      ' subtypes (value between [0, 100])',
                                  required=False, default=100)
     parser_assembly.add_argument('--stx2identity', type=float,
                                  metavar='95',
-                                 help='Minimal sequence identity to consider extra stx2 subtypes',
+                                 help='Minimal sequence identity to consider extra stx2'
+                                      ' subtypes (value between [0, 100])',
                                  required=False, default=100)
 
     args = parser.parse_args()
+
+    msg = []
+    if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
+        msg.append('--minGeneCoverage should be a value between [0, 100]')
+    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
+        msg.append('--minGeneIdentity should be a value between [0, 100]')
+    if args.stx2covered < 0 or args.stx2covered > 100:
+        msg.append('--stx2covered should be a value between [0, 100]')
+    if args.stx2identity < 0 or args.stx2identity > 100:
+        msg.append('--stx2identity should be a value between [0, 100]')
+
+    if len(msg) > 0:
+        argparse.ArgumentParser.error('\n'.join(msg))
 
     start_time = time.time()
 
