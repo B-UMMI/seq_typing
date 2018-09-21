@@ -82,7 +82,7 @@ def main():
 
     parser_optional_general = parser.add_argument_group('General facultative options')
     parser_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                         help='Path to the directory where the sequences will be stored',
+                                         help='Path to the directory where the sequences will be stored (default: ./)',
                                          required=False, default='.')
 
     args = parser.parse_args()

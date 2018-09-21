@@ -281,9 +281,9 @@ General facultative options:
 #### Organisms typing
 
 For the following organisms, references sequences are provided for serotyping.
-* Escherichia coli
-* Haemophilus influenzae
-* Streptococcus agalactiae
+* _Escherichia coli_
+* _Haemophilus influenzae_
+* _Streptococcus agalactiae_
 * Dengue virus (with genotype information)
 
 Use `--org` option with one of those organisms
@@ -547,33 +547,75 @@ To construct stx subtypes Blast DB, proceed as described [here](#assemblies):
 
 #### Update stx references
 
+An updated stx subtyping reference sequences can be obtained from [VirulenceFinder DB Bitbucket account](https://bitbucket.org/genomicepidemiology/virulencefinder_db). A specific script was created to get the most recent stx reference sequences.
+```
+usage: get_stx_db.py [-h] [--version]
+                     [-o /path/to/output/directory/]
 
+Gets STX sequences from virulencefinder_db to produce a STX subtyping DB.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --version             Version information
+
+General facultative options:
+  -o --outdir /path/to/output/directory/
+                        Path to the directory where the sequences will be
+                        stored (default: ./)
+```
+
+Usage example
+```bash
+# Activate Conda environment (when using Python via Conda environment)
+source activate seq_typing
+
+get_stx_db.py --outdir /path/output/directory/
+```
 
 ## Outputs
 
 __seq_typing.report.txt__  
 Text file with the typing result. If it was not possible to determine a type for a given reference file, `NT` (for None Typeable) will be returned for that file.
 
-Example of _E. coli_ serotyping:  
-`O157:H7`
+Example of _E. coli_ serotyping (two reference files):  
+`O157:H7`  
+Example of Dengue virus serotyping and genotyping (only one reference file):  
+`3-III`
 
 __seq_typing.report_types.tab__  
 Tabular file with detailed results:
-* _sequence_type_: type of the results reported. Three values can be found here. `selected` for the reference sequences selected for the reported typing result. `other_probable_type` for other reference sequences that could have been selected because fulfill selection thresholds. `most_likely` for the most likely reference sequences when no reference sequences fulfill selection thresholds.
-* _reference_file_: the reference file where the sequences came from.
-* _sequence_: reference sequences name
-* _sequenced_covered_: percentage of reference sequences covered
-* _coverage_depth_: mean reference sequences depth of coverage of the positions present
-* _sequence_identity_: percentage identity of reference sequences covered
+* General fields
+  * _sequence_type_: type of the results reported. Three values can be found here. `selected` for the reference sequences selected for the reported typing result. `other_probable_type` for other reference sequences that could have been selected because fulfill selection thresholds. `most_likely` for the most likely reference sequences when no reference sequences fulfill selection thresholds.
+  * _reference_file_: the reference file where the sequences came from.
+  * _type_: the type associated to the reference sequence
+  * _sequence_: reference sequences name
+  * _sequenced_covered_: percentage of reference sequences covered
+  * _coverage_depth_: mean reference sequences depth of coverage of the positions present (1 if assembly was used)
+  * _sequence_identity_: percentage identity of reference sequences covered
+* Assembly fields (filled with `NA` if reads were used)
+  * _query_: name of the provided sequence that had hit with the given reference sequence
+  * _q_start_: hit starting position of the provided sequence
+  * _q_end_: hit ending position of the provided sequence
+  * _s_start_: hit starting position of the reference sequence
+  * _s_end_: hit ending position of the reference sequence
+  * _evalue_: hit E-value
 
-Example of _E. coli_ serotyping:
+Example of _E. coli_ serotyping (two reference files) using reads:  
 
-| #sequence_type      | reference_file | sequence              | sequenced_covered | coverage_depth     | sequence_identity |
-|---------------------|----------------|-----------------------|-------------------|--------------------|-------------------|
-| selected            | O_type.fasta   | wzy_192_AF529080_O26  | 100.0             | 281.95405669599216 | 100.0             |
-| selected            | H_type.fasta   | fliC_269_AY337465_H11 | 99.4546693933197  | 51.76490747087046  | 99.86291980808772 |
-| other_probable_type | O_type.fasta   | wzx_208_AF529080_O26  | 100.0             | 223.3072050673001  | 100.0             |
-| other_probable_type | H_type.fasta   | fliC_276_AY337472_H11 | 98.84117246080436 | 37.52551724137931  | 99.86206896551724 |
+| #sequence_type      | reference_file | type | sequence              | sequenced_covered | coverage_depth     | sequence_identity | query | q_start | q_end | s_start | s_end | evalue |
+|---------------------|----------------|------|-----------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|
+| selected            | O_type.fasta   | O26  | wzy_192_AF529080_O26  | 100.0             | 281.95405669599216 | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
+| selected            | H_type.fasta   | H11  | fliC_269_AY337465_H11 | 99.4546693933197  | 51.76490747087046  | 99.86291980808772 | NA    | NA      | NA    | NA      | NA    | NA     |
+| other_probable_type | O_type.fasta   | O26  | wzx_208_AF529080_O26  | 100.0             | 223.3072050673001  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
+| other_probable_type | H_type.fasta   | H11  | fliC_276_AY337472_H11 | 98.84117246080436 | 37.52551724137931  | 99.86206896551724 | NA    | NA      | NA    | NA      | NA    | NA     |
+
+Example of Dengue virus serotyping and genotyping (only one reference file) using assembly:  
+
+| #sequence_type      | reference_file                 | type  | sequence                                                 | sequenced_covered | coverage_depth | sequence_identity | query                               | q_start | q_end | s_start | s_end | evalue |
+|---------------------|--------------------------------|-------|----------------------------------------------------------|-------------------|----------------|-------------------|-------------------------------------|---------|-------|---------|-------|--------|
+| selected            | 1_GenotypesDENV_14-05-18.fasta | 3-III | gb:EU529683|...|Subtype:3-III|Host:Human|seqTyping_3-III | 100.0             | 1              | 99.223            | NODE_1_length_10319_cov_2021.782660 | 138     | 10307 | 10170   | 1     | 0.0    |
+| other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 1-V   | gb:GQ868570|...|Subtype:1-V|Host:Human|seqTyping_1-V     | 100.0             | 1              | 99.479            | NODE_2_length_10199_cov_229.028848  | 13      | 10188 | 1       | 10176 | 0.0    |
+| other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 4-II  | gb:GQ868585|...|Subtype:4-II|Host:Human|seqTyping_4-II   | 100.0             | 1              | 99.38             | NODE_4_length_10182_cov_29.854132   | 13      | 10173 | 1       | 10161 | 0.0    |
 
 __run.*.log__  
 Running log file.  

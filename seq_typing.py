@@ -9,7 +9,7 @@ in a given sample
 
 Copyright (C) 2018 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: August 22, 2018
+Last modified: September 21, 2018
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -240,8 +240,8 @@ def prepare_references(references, map_ref_together, references_dir):
 
 def assembly_subcommand(args):
     msg = []
-    if args.blast is None and args.org is None:
-        msg.append('--blast or --org must be provided')
+    # if args.blast is None and args.org is None:
+    #     msg.append('--blast or --org must be provided')
     if args.blast is not None and args.type is None:
         msg.append('With --blast option you must provide the --type')
 
@@ -295,19 +295,16 @@ def blast_subcommand(args):
     msg = []
     if args.fasta is not None and args.type is None:
         msg.append('With --fasta option you must provide the --type')
-    if args.fasta is None and args.org is None:
-        msg.append('--fasta or --org must be provided')
+    # if args.fasta is None and args.org is None:
+    #     msg.append('--fasta or --org must be provided')
 
     if len(msg) > 0:
         argparse.ArgumentParser.error('\n'.join(msg))
 
-    if args.type == 'nucl':
-        utils.required_programs({'blastn': ['-version', '>=', '2.6.0']})
-    elif args.type == 'prot':
-        utils.required_programs({'blastp': ['-version', '>=', '2.6.0']})
+    utils.required_programs({'makeblastdb': ['-version', '>=', '2.6.0']})
 
     if args.fasta is not None:
-        args.fasta = [fasta.name for fasta in args.fasta]
+        args.fasta = [os.path.abspath(fasta.name) for fasta in args.fasta]
     else:
         args.fasta, _ = get_fasta_config(args.org)
         if args.type != 'nucl':
@@ -353,14 +350,14 @@ def blast_subcommand(args):
 
 
 def reads_subcommand(args):
-    if args.reference is None and args.org is None:
-        argparse.ArgumentParser.error('--reference or --org must be provided')
+    # if args.reference is None and args.org is None:
+    #     argparse.ArgumentParser.error('--reference or --org must be provided')
 
     rematch_script = include_rematch_dependencies_path()
 
     utils.required_programs({'rematch.py': ['--version', '>=', '3.2']})
 
-    args.fastq = [fastq.name for fastq in args.fastq]
+    args.fastq = [os.path.abspath(fastq.name) for fastq in args.fastq]
 
     if args.reference is not None:
         args.reference = [reference.name for reference in args.reference]
@@ -465,7 +462,7 @@ def python_arguments(program_name):
                                             ' will be assumed as being the paired fastq files',
                                        required=True)
 
-    parser_reads_reference = parser_reads.add_mutually_exclusive_group()
+    parser_reads_reference = parser_reads.add_mutually_exclusive_group(required=True)
     parser_reads_reference.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'),
                                         metavar='/path/to/reference_sequence.fasta',
                                         help='Fasta file containing reference sequences. If more than one file is'
@@ -478,27 +475,29 @@ def python_arguments(program_name):
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
     parser_reads_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                               help='Path to the directory where the information will be stored',
+                                               help='Path to the directory where the information will be stored'
+                                                    ' (default: ./',
                                                required=False, default='.')
     parser_reads_optional_general.add_argument('-j', '--threads', type=int, metavar='N',
-                                               help='Number of threads to use', required=False, default=1)
+                                               help='Number of threads to use (default: 1)', required=False, default=1)
     parser_reads_optional_general.add_argument('--mapRefTogether', action='store_true',
                                                help='Map the reads against all references together')
     parser_reads_optional_general.add_argument('--typeSeparator', type=str, metavar='_',
                                                help='Last single character separating the general sequence header from'
-                                                    ' the last part containing the type',
+                                                    ' the last part containing the type (default: _)',
                                                required=False, default='_')
     parser_reads_optional_general.add_argument('--extraSeq', type=int, metavar='N',
                                                help='Sequence length added to both ends of target sequences (usefull to'
                                                     ' improve reads mapping to the target one) that will be trimmed in'
-                                                    ' ReMatCh outputs',
+                                                    ' ReMatCh outputs (default when not using --org: 0)',
                                                required=False, default=0)
     parser_reads_optional_general.add_argument('--minCovPresence', type=int, metavar='N',
                                                help='Reference position minimum coverage depth to consider the position'
-                                                    ' to be present in the sample',
+                                                    ' to be present in the sample (default when not using --org: 5)',
                                                required=False, default=5)
     parser_reads_optional_general.add_argument('--minCovCall', type=int, metavar='N',
-                                               help='Reference position minimum coverage depth to perform a base call',
+                                               help='Reference position minimum coverage depth to perform a base call'
+                                                    ' (default when not using --org: 10)',
                                                required=False, default=10)
     parser_reads_optional_general.add_argument('--minFrequencyDominantAllele', type=float, metavar='0.6',
                                                help=argparse.SUPPRESS, required=False, default=0.6)
@@ -509,18 +508,19 @@ def python_arguments(program_name):
     #                                      required=False, default=0.6)
     parser_reads_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N',
                                                help='Minimum percentage of target reference sequence covered to'
-                                                    ' consider a sequence to be present (value between [0, 100])',
+                                                    ' consider a sequence to be present (value between [0, 100])'
+                                                    ' (default when not using --org: 60)',
                                                required=False, default=60)
     parser_reads_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N',
                                                help='Minimum depth of coverage of target reference sequence to'
-                                                    ' consider a sequence to be present',
+                                                    ' consider a sequence to be present (default: 2)',
                                                required=False, default=2)
     # parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS,
     #                                            required=False, default=80)
     parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
                                                help='Minimum percentage of identity of reference sequence covered to'
                                                     ' consider a gene to be present (value between [0, 100]). One INDEL'
-                                                    ' will be considered as one difference',
+                                                    ' will be considered as one difference (default: 80)',
                                                required=False, default=80)
     parser_reads_optional_general.add_argument('--doNotRemoveConsensus', action='store_true',
                                                help='Do not remove ReMatCh consensus sequences')
@@ -538,7 +538,7 @@ def python_arguments(program_name):
                                                ' types should be assessed',
                                           required=True)
 
-    parser_assembly_reference = parser_assembly.add_mutually_exclusive_group()
+    parser_assembly_reference = parser_assembly.add_mutually_exclusive_group(required=True)
     parser_assembly_reference.add_argument('-b', '--blast', nargs='+', type=argparse.FileType('r'),
                                            metavar='/path/to/Blast/db.sequences.file',
                                            help='Path to DB sequence file. If Blast DB was already produced only'
@@ -559,21 +559,24 @@ def python_arguments(program_name):
 
     parser_assembly_optional_general = parser_assembly.add_argument_group('General facultative options')
     parser_assembly_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                                  help='Path to the directory where the information will be stored',
+                                                  help='Path to the directory where the information will be stored'
+                                                       ' (default: ./)',
                                                   required=False, default='.')
-    parser_assembly_optional_general.add_argument('-j', '--threads', type=int, metavar='N',
-                                                  help='Number of threads to use', required=False, default=1)
+    parser_assembly_optional_general.add_argument('-j', '--threads', type=int, metavar='N', required=False,
+                                                  help='Number of threads to use (default: 1)', default=1)
     parser_assembly_optional_general.add_argument('--typeSeparator', type=str, metavar='_',
                                                   help='Last single character separating the general sequence header'
-                                                       ' from the last part containing the type',
+                                                       ' from the last part containing the type (default: _)',
                                                   required=False, default='_')
     parser_assembly_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N',
                                                   help='Minimum percentage of target reference sequence covered to'
-                                                       ' consider a sequence to be present (value between [0, 100])',
+                                                       ' consider a sequence to be present (value between [0, 100])'
+                                                       ' (default when not using --org: 60)',
                                                   required=False, default=60)
     parser_assembly_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
                                                   help='Minimum percentage of identity of reference sequence covered'
-                                                       ' to consider a gene to be present (value between [0, 100])',
+                                                       ' to consider a gene to be present (value between [0, 100])'
+                                                       ' (default: 80)',
                                                   required=False, default=80)
     parser_assembly_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N', help=argparse.SUPPRESS,
                                                   required=False, default=1)
@@ -585,7 +588,7 @@ def python_arguments(program_name):
     parser_blast_required.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
                                        help='Blast DB type (available options: %(choices)s)', required=True)
 
-    parser_blast_reference = parser_blast.add_mutually_exclusive_group()
+    parser_blast_reference = parser_blast.add_mutually_exclusive_group(required=True)
     parser_blast_reference.add_argument('-f', '--fasta', nargs='+', type=argparse.FileType('r'),
                                         metavar='/path/to/db.sequences.fasta',
                                         help='Path to DB sequence file. If more than one file is passed, a Blast DB for'
@@ -598,7 +601,8 @@ def python_arguments(program_name):
 
     parser_blast_optional_general = parser_blast.add_argument_group('General facultative options')
     parser_blast_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                               help='Path to the directory where the information will be stored',
+                                               help='Path to the directory where the information will be stored'
+                                                    ' (default: ./)',
                                                required=False, default='.')
 
     parser_reads.set_defaults(func=reads_subcommand)
