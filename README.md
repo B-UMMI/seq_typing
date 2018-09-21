@@ -443,10 +443,10 @@ Required one of the following options:
                         together with seq_typing.py
 
 ecoli_stx_subtyping specific facultative options:
-  --stx2covered 95      Minimal percentage of sequence covered to consider
+  --stx2covered N       Minimal percentage of sequence covered to consider
                         extra stx2 subtypes (value between [0, 100]) (default: 100)
-  --stx2identity 95     Minimal sequence identity to consider extra stx2
-                        subtypes (value between [0, 100]) (default: 100)
+  --stx2identity N      Minimal sequence identity to consider extra stx2
+                        subtypes (value between [0, 100]) (default: 99.5)
 
 General facultative options:
   -o --outdir /path/to/output/directory/
@@ -523,7 +523,7 @@ ecoli_stx_subtyping specific facultative options:
   --stx2covered 95      Minimal percentage of sequence covered to consider
                         extra stx2 subtypes (value between [0, 100]) (default: 100)
   --stx2identity 95     Minimal sequence identity to consider extra stx2
-                        subtypes (value between [0, 100]) (default: 100)
+                        subtypes (value between [0, 100]) (default: 99.5)
 
 General facultative options:
   -o --outdir /path/to/output/directory/

@@ -62,7 +62,6 @@ def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, s
         String containing stx2 subtype, NT if seq_typing ran but no subtype could be determined, or NA if it didn't run.
         If extra subtypes were found, they will be present inside brackets separated by ;
     """
-
     stx1_result = 'NA'
     stx2_result_main = None
     stx2_result_other = []
@@ -73,11 +72,11 @@ def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, s
             if not line.startswith('#'):
                 line = line.split('\t')
                 subtype = line[2]
-                if os.path.basename(line[1]) == stx1_reference_file:
+                if line[1] == stx1_reference_file:
                     if line[0] == 'selected':
                         stx1_result = subtype
                     stx1_run = True
-                if os.path.basename(line[1]) == stx2_reference_file:
+                if line[1] == stx2_reference_file:
                     if line[0] == 'selected':
                         stx2_result_main = subtype
                     elif line[0] == 'other_probable_type':
@@ -113,26 +112,26 @@ def main():
 
     # Add specific arguments
     parser_reads.add_argument('--stx2covered', type=float,
-                              metavar='95',
+                              metavar='N',
                               help='Minimal percentage of sequence covered to consider extra stx2'
-                                   ' subtypes (value between [0, 100])',
+                                   ' subtypes (value between [0, 100]) (default: 100)',
                               required=False, default=100)
     parser_reads.add_argument('--stx2identity', type=float,
-                              metavar='95',
+                              metavar='N',
                               help='Minimal sequence identity to consider extra stx2'
-                                   ' subtypes (value between [0, 100])',
-                              required=False, default=100)
+                                   ' subtypes (value between [0, 100]) (default: 99.5)',
+                              required=False, default=99.5)
 
     parser_assembly.add_argument('--stx2covered', type=float,
-                                 metavar='95',
+                                 metavar='N',
                                  help='Minimal percentage of sequence covered to consider extra stx2'
-                                      ' subtypes (value between [0, 100])',
+                                      ' subtypes (value between [0, 100]) (default: 100)',
                                  required=False, default=100)
     parser_assembly.add_argument('--stx2identity', type=float,
-                                 metavar='95',
+                                 metavar='N',
                                  help='Minimal sequence identity to consider extra stx2'
-                                      ' subtypes (value between [0, 100])',
-                                 required=False, default=100)
+                                      ' subtypes (value between [0, 100]) (default: 99.5)',
+                                 required=False, default=99.5)
 
     args = parser.parse_args()
 
@@ -179,10 +178,14 @@ def main():
                                                 args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
 
     stx1_result, stx2_result = stx_subtype_parser(
-        os.path.join(args.outdir, 'seq_typing.ecoli_stx_subtyping.report_types.tab'),
+        os.path.join(args.outdir, 'seq_typing.report_types.tab'),
         [ref_file for ref_file in reference if 'stx1' in os.path.basename(ref_file).lower()][0],
         [ref_file for ref_file in reference if 'stx2' in os.path.basename(ref_file).lower()][0],
         args.stx2covered, args.stx2identity)
+
+    if os.path.isfile(os.path.join(args.outdir, 'seq_typing.report_types.tab')):
+        os.rename(os.path.join(args.outdir, 'seq_typing.report_types.tab'),
+                  os.path.join(args.outdir, 'seq_typing.ecoli_stx_subtyping.report_types.tab'))
 
     print('\n'
           'E. coli stx_subtyping - {stx1_result}:{stx2_result}\n'
