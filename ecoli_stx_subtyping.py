@@ -8,7 +8,7 @@ ecoli_stx_subtyping.py - Gets E. coli stx subtypes
 
 Copyright (C) 2018 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: August 22, 2018
+Last modified: September 24, 2018
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -62,12 +62,10 @@ def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, s
         String containing stx2 subtype, NT if seq_typing ran but no subtype could be determined, or NA if it didn't run.
         If extra subtypes were found, they will be present inside brackets separated by ;
     """
-    stx1_result = 'NA'
+    stx1_result = 'NT'
     stx2_result_main = None
     stx2_result_other = []
     with open(report_types, 'rt') as reader:
-        stx1_run = False
-        stx2_run = False
         for line in reader:
             if not line.startswith('#'):
                 line = line.split('\t')
@@ -75,7 +73,6 @@ def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, s
                 if line[1] == stx1_reference_file:
                     if line[0] == 'selected':
                         stx1_result = subtype
-                    stx1_run = True
                 if line[1] == stx2_reference_file:
                     if line[0] == 'selected':
                         stx2_result_main = subtype
@@ -85,17 +82,12 @@ def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, s
                                 subtype != stx2_result_main and \
                                 subtype not in stx2_result_other:
                             stx2_result_other.append(subtype)
-                    stx2_run = True
-        if stx1_run and stx1_result == 'NA':
-            stx1_result = 'NT'
+
         if stx2_result_main is not None and len(stx2_result_other) > 0:
             stx2_result_main = '{main}({other})'.format(main=stx2_result_main,
                                                         other=';'.join(sorted(stx2_result_other)))
         elif stx2_result_main is None:
-            if stx2_run:
-                stx2_result_main = 'NT'
-            else:
-                stx2_result_main = 'NA'
+            stx2_result_main = 'NT'
 
     return stx1_result, stx2_result_main
 
@@ -107,7 +99,8 @@ def main():
     sys.path.append('..')
     from seq_typing import python_arguments
 
-    parser, parser_reads, parser_assembly, parser_blast = python_arguments('ecoli_stx_subtyping.py')
+    parser, parser_reads, parser_assembly, parser_blast = python_arguments(program_name='ecoli_stx_subtyping.py',
+                                                                           version=version)
     parser.description = 'Gets E. coli stx subtypes'
 
     # Add specific arguments
@@ -183,9 +176,14 @@ def main():
         [ref_file for ref_file in reference if 'stx2' in os.path.basename(ref_file).lower()][0],
         args.stx2covered, args.stx2identity)
 
+    # Rename the file to keep ecoli_stx_subtyping stamp
     if os.path.isfile(os.path.join(args.outdir, 'seq_typing.report_types.tab')):
         os.rename(os.path.join(args.outdir, 'seq_typing.report_types.tab'),
                   os.path.join(args.outdir, 'seq_typing.ecoli_stx_subtyping.report_types.tab'))
+
+    # Remove the file to only keep the ecoli_stx_subtyping one
+    if os.path.isfile(os.path.join(args.outdir, 'seq_typing.report.txt')):
+        os.remove(os.path.join(args.outdir, 'seq_typing.report.txt'))
 
     print('\n'
           'E. coli stx_subtyping - {stx1_result}:{stx2_result}\n'

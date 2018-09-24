@@ -9,7 +9,7 @@ in a given sample
 
 Copyright (C) 2018 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: September 21, 2018
+Last modified: September 24, 2018
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -412,7 +412,7 @@ def reads_subcommand(args):
     return folders_2_remove, references_results, args.reference, references_headers
 
 
-def python_arguments(program_name):
+def python_arguments(program_name, version):
     """
     Sets pythons arguments
 
@@ -420,6 +420,8 @@ def python_arguments(program_name):
     ----------
     program_name : str
         String with the name of the program
+    version : str
+        String with version
 
     Returns
     -------
@@ -616,7 +618,7 @@ def main():
     if sys.version_info[0] < 3:
         sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
 
-    parser, _, _, _ = python_arguments('seq_typing.py')
+    parser, _, _, _ = python_arguments('seq_typing.py', version)
     args = parser.parse_args()
 
     msg = []

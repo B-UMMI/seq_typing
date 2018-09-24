@@ -23,6 +23,8 @@ Determines which reference sequence is more likely to be present in a given samp
     * [General usage](#general-usage)
     * [Update stx references](#update-stx-references)
 * [Outputs](#outputs)
+  * [seq_typing.py](#seq_typingpy)
+  * [ecoli_stx_subtyping.py](#ecoli_stx_subtypingpy)
 * [Contact](#contact)
 
 ## Rational
@@ -574,6 +576,8 @@ get_stx_db.py --outdir /path/output/directory/
 
 ## Outputs
 
+### seq_typing.py
+
 __seq_typing.report.txt__  
 Text file with the typing result. If it was not possible to determine a type for a given reference file, `NT` (for None Typeable) will be returned for that file.
 
@@ -616,6 +620,29 @@ Example of Dengue virus serotyping and genotyping (only one reference file) usin
 | selected            | 1_GenotypesDENV_14-05-18.fasta | 3-III | gb:EU529683|...|Subtype:3-III|Host:Human|seqTyping_3-III | 100.0             | 1              | 99.223            | NODE_1_length_10319_cov_2021.782660 | 138     | 10307 | 10170   | 1     | 0.0    |
 | other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 1-V   | gb:GQ868570|...|Subtype:1-V|Host:Human|seqTyping_1-V     | 100.0             | 1              | 99.479            | NODE_2_length_10199_cov_229.028848  | 13      | 10188 | 1       | 10176 | 0.0    |
 | other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 4-II  | gb:GQ868585|...|Subtype:4-II|Host:Human|seqTyping_4-II   | 100.0             | 1              | 99.38             | NODE_4_length_10182_cov_29.854132   | 13      | 10173 | 1       | 10161 | 0.0    |
+
+__run.*.log__  
+Running log file.  
+
+### ecoli_stx_subtyping.py
+
+__seq_typing.ecoli_stx_subtyping.txt__  
+Text file with the typing result. The secondary results for _stx2_ genes are presented between brackets.  
+Example:  
+`stx1a:stx2c(stx2d)`  
+
+__seq_typing.ecoli_stx_subtyping.report_types.tab__  
+Tabular file with detailed results similar to the above _seq_typing.report_types.tab_ file:  
+Example (using reads):  
+
+| #sequence_type      | reference_file                      | type  | sequence                            | sequenced_covered | coverage_depth     | sequence_identity | query | q_start | q_end | s_start | s_end | evalue |
+|---------------------|-------------------------------------|-------|-------------------------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|
+| selected            | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1A:15:AF461168:a:seqTyping_stx1a | 100.0             | 65.37447257383967  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
+| selected            | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:15:AB071845:c:seqTyping_stx2c | 100.0             | 19.377777777777776 | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
+| other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1c | stx1B:11:AB071620:c:seqTyping_stx1c | 100.0             | 21.64814814814815  | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     |
+| other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1B:14:AM230663:a:seqTyping_stx1a | 100.0             | 45.06666666666667  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
+| other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:10:EF441604:c:seqTyping_stx2c | 100.0             | 17.2               | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     |
+| other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2d | stx2B:11:FM998840:d:seqTyping_stx2d | 100.0             | 9.996296296296297  | 99.62962962962963 | NA    | NA      | NA    | NA      | NA    | NA     |
 
 __run.*.log__  
 Running log file.  
