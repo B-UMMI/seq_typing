@@ -37,7 +37,7 @@ Determines which reference sequence is more likely to be present in a given samp
  </div>
 </html>
 
-**seq_typing** is a software to determine a given sample type using a read mapping approach or sequence Blast search against a set of reference sequences. The sample's reads are mapped to the given reference sequences and, based on the length of the sequence covered and it's depth of coverage, **seq_typing** decides which reference sequence is the most likely to be present, and returns the type associated with such sequence. When using sequences fasta files, similar decision rules are applied, but results are first cleaned to get the best hit for each DB sequence (based on alignment length, similarity, E-value and number of gaps).
+**seq_typing** is a software to determine a given sample type using a read mapping approach or sequence Blast search against a set of reference sequences. The sample's reads are mapped to the given reference sequences and, based on the length of the sequence covered and it's depth of coverage, **seq_typing** decides which reference sequence is the most likely to be present, and returns the type associated with such sequence. The sequence covered to a greater extent and with higher depth of coverage, that passes defined thresholds, will be selected. When using sequences fasta files, similar decision rules are applied, but results are first cleaned to get the best hit for each DB sequence (based on alignment length, similarity, E-value and number of gaps).
 
 ## Requirements
 <html>
