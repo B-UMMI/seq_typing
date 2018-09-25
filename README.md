@@ -42,7 +42,7 @@ Determines which reference sequence is more likely to be present in a given samp
 ## Requirements
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -53,7 +53,7 @@ _OR_
 ## Dependencies
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -67,7 +67,7 @@ _OR_
 ### Install dependencies
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -106,7 +106,7 @@ echo export PATH="$(pwd -P):$PATH" >> ~/.profile
 ## Install seq_typing
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -128,7 +128,7 @@ echo export PATH="$(pwd -P):$PATH" >> ~/.profile
 #### General info
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -161,7 +161,7 @@ Subcommands:
 ##### _reads_ module  
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -233,7 +233,7 @@ General facultative options:
 ##### _blast_ module  
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -272,7 +272,7 @@ General facultative options:
 ##### _assembly_ module  
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -335,7 +335,7 @@ General facultative options:
 #### Organisms typing
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -352,7 +352,7 @@ Use `--org` option with one of those organisms
 ##### Reads
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -394,7 +394,7 @@ seq_typing.py reads --reference references/Ecoli/O_type.fasta references/Ecoli/H
 ##### Assemblies
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -462,7 +462,7 @@ It works very similar to **seq_typing.py**.
 #### General usage
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -487,7 +487,7 @@ Subcommands:
 ##### ecoli_stx_subtyping Reads
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -562,7 +562,7 @@ General facultative options:
 ##### ecoli_stx_subtyping Assembly
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -631,7 +631,7 @@ General facultative options:
 ##### Blast
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -641,7 +641,7 @@ To construct stx subtypes Blast DB, proceed as described [here](#assemblies):
 #### Update stx references
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -675,7 +675,7 @@ get_stx_db.py --outdir /path/output/directory/
 ### seq_typing.py
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -728,7 +728,7 @@ Running log file.
 ### ecoli_stx_subtyping.py
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
@@ -756,7 +756,7 @@ Running log file.
 ## Contact
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
