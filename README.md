@@ -64,6 +64,9 @@ _OR_
 * Fasta file:
   * [Blast+](https://www.ncbi.nlm.nih.gov/books/NBK279690/)
 
+For _get_stx_db.py_ script:
+* [Biopython](https://biopython.org/)
+
 ### Install dependencies
 <html>
  <div align="right">
@@ -74,7 +77,7 @@ _OR_
 Python using [Conda](https://conda.io/) (Python 3, with _future_ module):
 
 ```bash
-conda create --name seq_typing python=3 future
+conda create --name seq_typing python=3 future biopython
 ```
 
 ReMatCh:
