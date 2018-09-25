@@ -88,12 +88,10 @@ def checkPrograms(programs_version_dictionary):
     return listMissings
 
 
-def requiredPrograms():
-    programs_version_dictionary = {}
-    programs_version_dictionary['rematch.py'] = ['--version', '>=', '3.2']
-    missingPrograms = checkPrograms(programs_version_dictionary)
-    if len(missingPrograms) > 0:
-        sys.exit('\n' + 'Errors:' + '\n' + '\n'.join(missingPrograms))
+def required_programs(programs_version_dictionary):
+    missing_programs = checkPrograms(programs_version_dictionary)
+    if len(missing_programs) > 0:
+        sys.exit('\n' + 'Errors:' + '\n' + '\n'.join(missing_programs))
 
 
 def general_information(logfile, version, outdir, time_str):
@@ -118,10 +116,7 @@ def general_information(logfile, version, outdir, time_str):
 
     # Print program version
     print('\n' + 'VERSION:')
-    scriptVersionGit(version, present_directory, script_path)
-
-    # Check programms
-    requiredPrograms()
+    script_version_git(version=version, current_directory=present_directory, script_path=script_path)
 
     return script_path
 
@@ -142,20 +137,41 @@ def setPATHvariable(doNotUseProvidedSoftware, script_path):
     print(os.environ['PATH'])
 
 
-def scriptVersionGit(version, directory, script_path):
+def script_version_git(version, current_directory, script_path, no_git_info=True):
+    """
+    Print script version and get GitHub commit information
+
+    Parameters
+    ----------
+    version : str
+        Version of the script, e.g. "4.0"
+    current_directory : str
+        Path to the directory where the script was start to run
+    script_path : str
+        Path to the script running
+    no_git_info : bool, default True
+        False if it is not necessary to retreive the GitHub commit information
+
+    Returns
+    -------
+
+    """
     print('Version ' + version)
 
-    try:
-        os.chdir(os.path.dirname(script_path))
-        command = ['git', 'log', '-1', '--date=local', '--pretty=format:"%h (%H) - Commit by %cn, %cd) : %s"']
-        run_successfully, stdout, stderr = runCommandPopenCommunicate(command, False, 15, False)
-        print(stdout)
-        command = ['git', 'remote', 'show', 'origin']
-        run_successfully, stdout, stderr = runCommandPopenCommunicate(command, False, 15, False)
-        print(stdout)
-        os.chdir(directory)
-    except:
-        print('HARMLESS WARNING: git command possibly not found. The GitHub repository information will not be obtained.')
+    if not no_git_info:
+        try:
+            os.chdir(os.path.dirname(script_path))
+            command = ['git', 'log', '-1', '--date=local', '--pretty=format:"%h (%H) - Commit by %cn, %cd) : %s"']
+            run_successfully, stdout, stderr = runCommandPopenCommunicate(command, False, 15, False)
+            print(stdout)
+            command = ['git', 'remote', 'show', 'origin']
+            run_successfully, stdout, stderr = runCommandPopenCommunicate(command, False, 15, False)
+            print(stdout)
+        except:
+            print('HARMLESS WARNING: git command possibly not found. The GitHub repository information will not be'
+                  ' obtained.')
+        finally:
+            os.chdir(current_directory)
 
 
 def runTime(start_time):
@@ -237,11 +253,11 @@ def runCommandPopenCommunicate(command, shell_True, timeout_sec_None, print_coma
     if timeout_sec_None is None:
         stdout, stderr = proc.communicate()
     else:
-        timer = Timer(timeout_sec_None, kill_subprocess_Popen, args=(proc, command,))
-        timer.start()
+        time_counter = Timer(timeout_sec_None, kill_subprocess_Popen, args=(proc, command,))
+        time_counter.start()
         stdout, stderr = proc.communicate()
-        timer.cancel()
-        not_killed_by_timer = timer.isAlive()
+        time_counter.cancel()
+        not_killed_by_timer = time_counter.isAlive()
 
     if proc.returncode == 0:
         run_successfully = True
