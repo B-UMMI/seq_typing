@@ -645,7 +645,7 @@ To construct stx subtypes Blast DB, proceed as described [here](#assemblies):
  </div>
 </html>
 
-An updated stx subtyping reference sequences can be obtained from [VirulenceFinder DB Bitbucket account](https://bitbucket.org/genomicepidemiology/virulencefinder_db). A specific script was created to get the most recent stx reference sequences.
+An updated stx subtyping reference sequences can be obtained from [VirulenceFinder DB Bitbucket account](https://bitbucket.org/genomicepidemiology/virulencefinder_db). A specific script was created to get the most recent stx reference sequences and can be found inside _modules_ directory.
 ```
 usage: get_stx_db.py [-h] [--version]
                      [-o /path/to/output/directory/]
@@ -667,7 +667,7 @@ Usage example
 # Activate Conda environment (when using Python via Conda environment)
 source activate seq_typing
 
-get_stx_db.py --outdir /path/output/directory/
+modules/get_stx_db.py --outdir /path/output/directory/
 ```
 
 ## Outputs
