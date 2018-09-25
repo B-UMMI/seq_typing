@@ -1,4 +1,3 @@
-<var id="top"></var>
 # seq_typing
 
 Determines which reference sequence is more likely to be present in a given sample
@@ -34,7 +33,7 @@ Determines which reference sequence is more likely to be present in a given samp
 ## Rational
 <html>
  <div align="right">
-  <a href="top">Back to top</a><br>
+  <a href="#seq_typing">Back to top</a><br>
  </div>
 </html>
 
