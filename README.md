@@ -1,3 +1,4 @@
+<var id="top"></var>
 # seq_typing
 
 Determines which reference sequence is more likely to be present in a given sample
@@ -21,6 +22,9 @@ Determines which reference sequence is more likely to be present in a given samp
       * [Assemblies](#assemblies)
   * [E. coli stx subtyping](#e-coli-stx-subtyping)
     * [General usage](#general-usage)
+      * [Reads](#ecoli_stx_subtyping-reads)
+      * [Assembly](#ecoli_stx_subtyping-assembly)
+      * [Blast](#blast)
     * [Update stx references](#update-stx-references)
 * [Outputs](#outputs)
   * [seq_typing.py](#seq_typingpy)
@@ -28,16 +32,31 @@ Determines which reference sequence is more likely to be present in a given samp
 * [Contact](#contact)
 
 ## Rational
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 **seq_typing** is a software to determine a given sample type using a read mapping approach or sequence Blast search against a set of reference sequences. The sample's reads are mapped to the given reference sequences and, based on the length of the sequence covered and it's depth of coverage, **seq_typing** decides which reference sequence is the most likely to be present, and returns the type associated with such sequence. When using sequences fasta files, similar decision rules are applied, but results are first cleaned to get the best hit for each DB sequence (based on alignment length, similarity, E-value and number of gaps).
 
 ## Requirements
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 * Illumina Fastq files  
 _OR_
 * Sequence fasta file
 
 ## Dependencies
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 * Python 3
 * Fastq files:
@@ -47,6 +66,11 @@ _OR_
   * [Blast+](https://www.ncbi.nlm.nih.gov/books/NBK279690/)
 
 ### Install dependencies
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 Python using [Conda](https://conda.io/) (Python 3, with _future_ module):
 
@@ -81,6 +105,11 @@ echo export PATH="$(pwd -P):$PATH" >> ~/.profile
 ```
 
 ## Install seq_typing
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 ```bash
 git clone https://github.com/B-UMMI/seq_typing.git
@@ -98,6 +127,12 @@ echo export PATH="$(pwd -P):$PATH" >> ~/.profile
 ### General use
 
 #### General info
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
+
 ```
 usage: seq_typing.py [-h] [--version] {reads,assembly,blast} ...
 
@@ -125,6 +160,12 @@ Subcommands:
   Run seq_typing.py using a fasta file. If running multiple samples using the same DB sequence file, consider use first _seq_typing.py blast_ module.
 
 ##### _reads_ module  
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
+
 Run seq_typing.py using fastq files.
 ```
 usage: seq_typing.py reads [-h]
@@ -191,6 +232,12 @@ General facultative options:
 ```
 
 ##### _blast_ module  
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
+
 Creates Blast DB.  
 This is useful when running the same DB sequence file for different samples.
 ```
@@ -224,6 +271,12 @@ General facultative options:
 ```
 
 ##### _assembly_ module  
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
+
 Run **seq_typing** using a fasta file.  
 If running multiple samples using the same DB sequence file, consider use first _seq_typing.py blast_ module.
 ```
@@ -281,6 +334,11 @@ General facultative options:
 ```
 
 #### Organisms typing
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 For the following organisms, references sequences are provided for serotyping.
 * _Escherichia coli_
@@ -293,6 +351,11 @@ Use `--org` option with one of those organisms
 #### Usage examples
 
 ##### Reads
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 Serotyping _Haemophilus influenzae_ using provided references sequences (that uses only one reference sequences file):
 ```bash
@@ -330,6 +393,11 @@ seq_typing.py reads --reference references/Ecoli/O_type.fasta references/Ecoli/H
 ```
 
 ##### Assemblies
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 Type _Dengue virus_ using assemblies with provided reference sequences (uses only one reference sequences file):
 ```bash
@@ -393,6 +461,12 @@ A specific script was created for _E. coli_ _stx_ subtyping (**ecoli_stx_subtypi
 It works very similar to **seq_typing.py**.
 
 #### General usage
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
+
 ```
 usage: ecoli_stx_subtyping.py [-h] [--version] {reads,assembly,blast} ...
 
@@ -411,7 +485,13 @@ Subcommands:
     assembly            assembly --help
 ```
 
-**READS**  
+##### ecoli_stx_subtyping Reads
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
+
 Run _ecoli_stx_subtyping.py_ using fastq files.
 ```
 usage: ecoli_stx_subtyping.py reads [-h]
@@ -480,7 +560,13 @@ General facultative options:
   --resume              Resume ecoli_stx_subtyping.py reads
 ```
 
-**ASSEMBLY**  
+##### ecoli_stx_subtyping Assembly
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
+
 Run _ecoli_stx_subtyping_ using a fasta file.
 ```
 usage: ecoli_stx_subtyping.py assembly [-h]
@@ -543,11 +629,22 @@ General facultative options:
   --debug               Debug mode: do not remove temporary files
 ```
 
-**BLAST**  
+##### Blast
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
+
 To construct stx subtypes Blast DB, proceed as described [here](#assemblies):  
 `seq_typing.py blast --org stx subtyping`.
 
 #### Update stx references
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 An updated stx subtyping reference sequences can be obtained from [VirulenceFinder DB Bitbucket account](https://bitbucket.org/genomicepidemiology/virulencefinder_db). A specific script was created to get the most recent stx reference sequences.
 ```
@@ -577,6 +674,11 @@ get_stx_db.py --outdir /path/output/directory/
 ## Outputs
 
 ### seq_typing.py
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 __seq_typing.report.txt__  
 Text file with the typing result. If it was not possible to determine a type for a given reference file, `NT` (for None Typeable) will be returned for that file.
@@ -625,6 +727,11 @@ __run.*.log__
 Running log file.  
 
 ### ecoli_stx_subtyping.py
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 __seq_typing.ecoli_stx_subtyping.txt__  
 Text file with the typing result. The secondary results for _stx2_ genes are presented between brackets.  
@@ -637,17 +744,22 @@ Example (using reads):
 
 | #sequence_type      | reference_file                      | type  | sequence                            | sequenced_covered | coverage_depth     | sequence_identity | query | q_start | q_end | s_start | s_end | evalue |
 |---------------------|-------------------------------------|-------|-------------------------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|
-| selected            | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1A:15:AF461168:a:seqTyping_stx1a | 100.0             | 65.37447257383967  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
-| selected            | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:15:AB071845:c:seqTyping_stx2c | 100.0             | 19.377777777777776 | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
-| other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1c | stx1B:11:AB071620:c:seqTyping_stx1c | 100.0             | 21.64814814814815  | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     |
-| other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1B:14:AM230663:a:seqTyping_stx1a | 100.0             | 45.06666666666667  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
-| other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:10:EF441604:c:seqTyping_stx2c | 100.0             | 17.2               | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     |
-| other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2d | stx2B:11:FM998840:d:seqTyping_stx2d | 100.0             | 9.996296296296297  | 99.62962962962963 | NA    | NA      | NA    | NA      | NA    | NA     |
+| selected            | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1A:15:AF461168:A:seqTyping_stx1a | 100.0             | 65.37447257383967  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
+| selected            | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:15:AB071845:C:seqTyping_stx2c | 100.0             | 19.377777777777776 | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
+| other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1c | stx1B:11:AB071620:C:seqTyping_stx1c | 100.0             | 21.64814814814815  | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     |
+| other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1B:14:AM230663:A:seqTyping_stx1a | 100.0             | 45.06666666666667  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
+| other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:10:EF441604:C:seqTyping_stx2c | 100.0             | 17.2               | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     |
+| other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2d | stx2B:11:FM998840:D:seqTyping_stx2d | 100.0             | 9.996296296296297  | 99.62962962962963 | NA    | NA      | NA    | NA      | NA    | NA     |
 
 __run.*.log__  
 Running log file.  
 
 ## Contact
+<html>
+ <div align="right">
+  <a href="top">Back to top</a><br>
+ </div>
+</html>
 
 Miguel Machado  
 <mpmachado@medicina.ulisboa.pt>
