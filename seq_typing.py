@@ -9,7 +9,7 @@ in a given sample
 
 Copyright (C) 2018 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: September 24, 2018
+Last modified: October 15, 2018
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ import modules.run_rematch as run_rematch
 import modules.parse_results as parse_results
 import modules.run_blast as run_blast
 
-version = '2.0'
+version = '2.1'
 
 
 def parse_config(config_file):
@@ -355,7 +355,7 @@ def reads_subcommand(args):
 
     rematch_script = include_rematch_dependencies_path()
 
-    utils.required_programs({'rematch.py': ['--version', '>=', '3.2']})
+    utils.required_programs({'rematch.py': ['--version', '>=', '4.0']})
 
     args.fastq = [os.path.abspath(fastq.name) for fastq in args.fastq]
 

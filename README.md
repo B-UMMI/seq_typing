@@ -5,7 +5,7 @@ Determines which reference sequence is more likely to be present in a given samp
 ---
 
 * [Rational](#rational)
-* [Requirements](#requirements)
+* [Input requirements](#input-requirements)
 * [Dependencies](#dependencies)
   * [Install dependencies](#install-dependencies)
 * [Install seq_typing](#install-seq_typing)
@@ -37,9 +37,12 @@ Determines which reference sequence is more likely to be present in a given samp
  </div>
 </html>
 
-**seq_typing** is a software to determine a given sample type using a read mapping approach or sequence Blast search against a set of reference sequences. The sample's reads are mapped to the given reference sequences and, based on the length of the sequence covered and it's depth of coverage, **seq_typing** decides which reference sequence is the most likely to be present, and returns the type associated with such sequence. The sequence covered to a greater extent and with higher depth of coverage, that passes defined thresholds, will be selected. When using sequences fasta files, similar decision rules are applied, but results are first cleaned to get the best hit for each DB sequence (based on alignment length, similarity, E-value and number of gaps).
+**seq_typing** is a software to determine a given sample type using either a read mapping approach or a sequence Blast search against a set of reference sequences.  
+For the read mapping approach, the sample's reads are mapped to the given reference sequences and, based on the length of the sequence covered and it's depth of coverage, **seq_typing** decides which reference sequence is the most likely to be present, and returns the type associated with such sequence. The selected sequence will be the one covered to a greater extent and with higher depth of coverage, that passes defined thresholds.  
+For the Blast approach (when using sequences fasta files) the sequence selected, for each DB sequence, the best Blast hit is retrieved. The best hit is defined by the largest alignment length, highest similarity, and lowest E-value and number of gaps (applied hierarchically following the order here described).  
+In both cases, manual curation and sequence type definition is required for reference sequences database production.
 
-## Requirements
+## Input requirements
 <html>
  <div align="right">
   <a href="#seq_typing">Back to top</a><br>
@@ -74,7 +77,7 @@ For _get_stx_db.py_ script:
  </div>
 </html>
 
-Python using [Conda](https://conda.io/) (Python 3, with _future_ module):
+Python using [Conda](https://conda.io/) (Python 3, with _future_ and Biopython modules):
 
 ```bash
 conda create --name seq_typing python=3 future biopython
