@@ -92,9 +92,7 @@ def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraS
     utils.removeDirectory(module_dir)
     os.makedirs(module_dir)
 
-    sys.path.append(os.path.join(os.path.dirname(rematch_script), 'modules', ''))
-    # from past import autotranslate
-    # autotranslate(['rematch_module', 'utils'])
+    sys.path.append(os.path.join(os.path.dirname(rematch_script), 'modules'))
     import rematch_module
 
     references_results = rematch_for_different_references(fastq, references_files, threads, module_dir, extraSeq,
