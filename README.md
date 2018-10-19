@@ -28,6 +28,7 @@ Determines which reference sequence is more likely to be present in a given samp
 * [Outputs](#outputs)
   * [seq_typing.py](#seq_typingpy)
   * [ecoli_stx_subtyping.py](#ecoli_stx_subtypingpy)
+* [Citation](#citation)
 * [Contact](#contact)
 
 ## Rational
@@ -38,7 +39,7 @@ Determines which reference sequence is more likely to be present in a given samp
 </html>
 
 **seq_typing** is a software to determine a given sample type using either a read mapping approach or a sequence Blast search against a set of reference sequences.  
-For the read mapping approach, the sample's reads are mapped to the given reference sequences and, based on the length of the sequence covered and it's depth of coverage, **seq_typing** decides which reference sequence is the most likely to be present, and returns the type associated with such sequence. The selected sequence will be the one covered to a greater extent and with higher depth of coverage, that passes defined thresholds.  
+For the read mapping approach, the sample's reads are mapped to the given reference sequences using [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml), parsed with [Samtools](http://www.htslib.org/) and analysed via [ReMatCh](https://github.com/B-UMMI/ReMatCh). Based on the length of the sequence covered and it's depth of coverage, **seq_typing** returns the type associated with the reference sequence which is more likely to be present. The selected sequence will be the one covered to a greater extent and with higher depth of coverage, that passes defined thresholds.  
 For the Blast approach (when using sequences fasta files) the sequence selected, for each DB sequence, the best Blast hit is retrieved. The best hit is defined by the largest alignment length, highest similarity, and lowest E-value and number of gaps (applied hierarchically following the order here described).  
 In both cases, manual curation and sequence type definition is required for reference sequences database production.
 
@@ -758,6 +759,15 @@ Example (using reads):
 
 __run.*.log__  
 Running log file.  
+
+## Citation
+<html>
+ <div align="right">
+  <a href="#seq_typing">Back to top</a><br>
+ </div>
+</html>
+
+MP Machado, J Halkilahti, I Mendes, M Pinto, E Lizarazo, JP Gomes, M Ramirez, M Rossi, JA Carrico. _seq_typing_ **GitHub** https://github.com/B-UMMI/seq_typing
 
 ## Contact
 <html>
