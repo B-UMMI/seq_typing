@@ -81,10 +81,12 @@ def checkPrograms(programs_version_dictionary):
                         elif int(program_found_version[i]) == int(program_version_required[i]):
                             continue
                         else:
-                            listMissings.append('It is required ' + program + ' with version ' + programs[program][1] + ' ' + programs[program][2])
+                            listMissings.append('It is required ' + program + ' with version ' +
+                                                programs[program][1] + ' ' + programs[program][2])
                 else:
                     if version_line != programs[program][2]:
-                        listMissings.append('It is required ' + program + ' with version ' + programs[program][1] + ' ' + programs[program][2])
+                        listMissings.append('It is required ' + program + ' with version ' + programs[program][1] +
+                                            ' ' + programs[program][2])
     return listMissings
 
 
@@ -94,7 +96,7 @@ def required_programs(programs_version_dictionary):
         sys.exit('\n' + 'Errors:' + '\n' + '\n'.join(missing_programs))
 
 
-def general_information(logfile, version, outdir, time_str):
+def general_information(script_name, logfile, version, outdir, time_str):
     # Check if output directory exists
 
     print('\n' + '==========> seq_typing <==========')
@@ -106,8 +108,8 @@ def general_information(logfile, version, outdir, time_str):
 
     # Print command
     print('\n' + 'COMMAND:')
-    script_path = os.path.abspath(sys.argv[0])
-    print(sys.executable + ' ' + script_path + ' ' + ' '.join(sys.argv[1:]))
+    script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), script_name)
+    print(sys.executable + ' ' + ' '.join(sys.argv))
 
     # Print directory where programme was lunch
     print('\n' + 'PRESENT DIRECTORY:')
@@ -137,7 +139,7 @@ def setPATHvariable(doNotUseProvidedSoftware, script_path):
     print(os.environ['PATH'])
 
 
-def script_version_git(version, current_directory, script_path, no_git_info=True):
+def script_version_git(version, current_directory, script_path, no_git_info=False):
     """
     Print script version and get GitHub commit information
 
@@ -149,18 +151,18 @@ def script_version_git(version, current_directory, script_path, no_git_info=True
         Path to the directory where the script was start to run
     script_path : str
         Path to the script running
-    no_git_info : bool, default True
-        False if it is not necessary to retreive the GitHub commit information
+    no_git_info : bool, default False
+        True if it is not necessary to retreive the GitHub commit information
 
     Returns
     -------
 
     """
-    print('Version ' + version)
+    print('Version {}'.format(version))
 
     if not no_git_info:
         try:
-            os.chdir(os.path.dirname(script_path))
+            os.chdir(os.path.dirname(os.path.dirname(script_path)))
             command = ['git', 'log', '-1', '--date=local', '--pretty=format:"%h (%H) - Commit by %cn, %cd) : %s"']
             run_successfully, stdout, stderr = runCommandPopenCommunicate(command, False, 15, False)
             print(stdout)
@@ -390,7 +392,8 @@ def clean_headers_sequences(sequence_dict):
 
 class Bcolors_print(object):
     # The entire table of ANSI color codes - https://gist.github.com/chrisopedia/8754917
-    colours = {'BOLD': '\033[1m', 'HEADER': '\033[1;96m', 'OKBLUE': '\033[94m', 'OKGREEN': '\033[92m', 'WARNING': '\033[93m', 'FAIL': '\033[91m', 'UNDERLINE': '\033[4m', 'ENDC': '\033[0m'}
+    colours = {'BOLD': '\033[1m', 'HEADER': '\033[1;96m', 'OKBLUE': '\033[94m', 'OKGREEN': '\033[92m',
+               'WARNING': '\033[93m', 'FAIL': '\033[91m', 'UNDERLINE': '\033[4m', 'ENDC': '\033[0m'}
 
     def __init__(self, string, color_code):
         # self.string_bcolors = self.colours[color_code] + string + self.colours['ENDC']

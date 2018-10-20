@@ -29,13 +29,22 @@ import argparse
 import os
 import time
 import sys
+from pkg_resources import resource_filename
 
-import modules.utils as utils
-import modules.run_rematch as run_rematch
-import modules.parse_results as parse_results
-import modules.run_blast as run_blast
+try:
+    from __init__ import __version__
 
-version = '2.1'
+    import modules.utils as utils
+    import modules.run_rematch as run_rematch
+    import modules.parse_results as parse_results
+    import modules.run_blast as run_blast
+except ImportError:
+    from seqtyping.__init__ import __version__
+
+    from seqtyping.modules import utils as utils
+    from seqtyping.modules import run_rematch as run_rematch
+    from seqtyping.modules import parse_results as parse_results
+    from seqtyping.modules import run_blast as run_blast
 
 
 def parse_config(config_file):
@@ -90,7 +99,7 @@ def get_fasta_config(species):
     fasta = []
     config = None
 
-    file_path = os.path.abspath(__file__)
+    file_path = os.path.abspath(os.path.realpath(__file__))
     species_folder = os.path.join(os.path.dirname(file_path), 'reference_sequences', '_'.join(species), '')
 
     files = [f for f in os.listdir(species_folder) if not f.startswith('.') and
@@ -115,7 +124,7 @@ def get_species_allowed():
         List with species names, e.g. ['escherichia coli', 'streptococcus agalactiae']
     """
 
-    file_path = os.path.abspath(__file__)
+    file_path = os.path.abspath(os.path.realpath(__file__))
     serotyping_folder = os.path.join(os.path.dirname(file_path), 'reference_sequences', '')
     species = [d.replace('_', ' ') for d in os.listdir(serotyping_folder) if not d.startswith('.') and
                os.path.isdir(os.path.join(serotyping_folder, d))]
@@ -123,14 +132,28 @@ def get_species_allowed():
 
 
 def include_rematch_dependencies_path():
+    original_rematch = None
     command = ['which', 'rematch.py']
     run_successfully, stdout, stderr = utils.runCommandPopenCommunicate(command, False, None, False)
     if run_successfully:
-        rematch_script = stdout.splitlines()[0]
-        utils.setPATHvariable(False, rematch_script)
-        return rematch_script
+        original_rematch = stdout.splitlines()[0]
+
+    resource_rematch = None
+    try:
+        resource_rematch = resource_filename('ReMatCh', 'rematch.py')
+    except ModuleNotFoundError:
+        resource_rematch = original_rematch
+    else:
+        print('\n'
+              'Using ReMatCh "{resource_rematch}" via "{original_rematch}"\n'.format(resource_rematch=resource_rematch,
+                                                                                     original_rematch=original_rematch))
+
+    if resource_rematch is not None:
+        utils.setPATHvariable(False, resource_rematch)
     else:
         sys.exit('ReMatCh not found in the PATH')
+
+    return resource_rematch
 
 
 def clean_header(header, problematic_characters):
@@ -615,10 +638,12 @@ def python_arguments(program_name, version):
 
 
 def main():
-    if sys.version_info[0] < 3:
-        sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
+    program_name = 'seq_typing.py'
 
-    parser, _, _, _ = python_arguments('seq_typing.py', version)
+    if sys.version_info[0] < 3:
+        sys.exit('Must be using Python 3. Try calling "python3 {}"'.format(program_name))
+
+    parser, _, _, _ = python_arguments(program_name, __version__)
     args = parser.parse_args()
 
     msg = []
@@ -639,7 +664,8 @@ def main():
     # Start logger
     logfile, time_str = utils.start_logger(args.outdir)
 
-    script_path = utils.general_information(logfile, version, args.outdir, time_str)
+    script_path = utils.general_information(script_name=program_name, logfile=logfile, version=__version__,
+                                            outdir=args.outdir, time_str=time_str)
     del script_path
     print('\n')
 

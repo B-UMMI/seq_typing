@@ -2,7 +2,10 @@ import os.path
 import sys
 from functools import partial
 
-import modules.utils as utils
+try:
+    import modules.utils as utils
+except ImportError:
+    from seqtyping.modules import utils as utils
 
 
 def check_db_exists(db_path):

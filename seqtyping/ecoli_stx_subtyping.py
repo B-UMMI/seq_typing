@@ -29,9 +29,16 @@ import os.path
 import time
 import argparse
 
-from modules import utils
-from modules import parse_results
+try:
+    import modules.utils as utils
+    import modules.parse_results as parse_results
 
+    from seq_typing import python_arguments
+except ImportError:
+    from seqtyping.modules import utils as utils
+    from seqtyping.modules import parse_results as parse_results
+
+    from seqtyping.seq_typing import python_arguments
 
 version = '1.0'
 
@@ -93,13 +100,12 @@ def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, s
 
 
 def main():
+    program_name = 'ecoli_stx_subtyping.py'
+
     if sys.version_info[0] < 3:
-        sys.exit('Must be using Python 3. Try calling "python3 ecoli_stx_subtyping.py"')
+        sys.exit('Must be using Python 3. Try calling "python3 {}"'.format(program_name))
 
-    sys.path.append('..')
-    from seq_typing import python_arguments
-
-    parser, parser_reads, parser_assembly, parser_blast = python_arguments(program_name='ecoli_stx_subtyping.py',
+    parser, parser_reads, parser_assembly, parser_blast = python_arguments(program_name=program_name,
                                                                            version=version)
     parser.description = 'Gets E. coli stx subtypes'
 
@@ -137,6 +143,8 @@ def main():
         msg.append('--stx2covered should be a value between [0, 100]')
     if args.stx2identity < 0 or args.stx2identity > 100:
         msg.append('--stx2identity should be a value between [0, 100]')
+    if args.org != ['stx', 'subtyping']:
+        msg.append('Use "--org stx subtyping" with {}'.format(program_name))
 
     if len(msg) > 0:
         argparse.ArgumentParser.error('\n'.join(msg))
@@ -150,8 +158,8 @@ def main():
     # Start logger
     logfile, time_str = utils.start_logger(args.outdir)
 
-    script_path = utils.general_information(logfile, version, args.outdir, time_str)
-    del script_path
+    _ = utils.general_information(script_name=program_name, logfile=logfile, version=version,
+                                  outdir=args.outdir, time_str=time_str)
     print('\n')
 
     folders_2_remove = []

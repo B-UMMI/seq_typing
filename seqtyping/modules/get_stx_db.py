@@ -36,7 +36,10 @@ from Bio.SeqRecord import SeqRecord
 
 from itertools import product
 
-import utils as utils
+try:
+    import modules.utils as utils
+except ImportError:
+    from seqtyping.modules import utils as utils
 
 
 version = '1.0'

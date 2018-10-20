@@ -2,12 +2,18 @@ from functools import partial
 import os
 import sys
 
-import modules.utils as utils
+try:
+    import modules.utils as utils
+except ImportError:
+    from seqtyping.modules import utils as utils
 
 
 def remove_alignment(alignment_dir):
     if os.path.isdir(alignment_dir):
-        files = [f for f in os.listdir(alignment_dir) if not f.startswith('.') and os.path.isfile(os.path.join(alignment_dir, f)) and f.endswith(('.bam', '.sam', '.cram'))]
+        files = [f for f in os.listdir(alignment_dir) if
+                 not f.startswith('.') and
+                 os.path.isfile(os.path.join(alignment_dir, f)) and
+                 f.endswith(('.bam', '.sam', '.cram'))]
         for file_found in files:
             file_found = os.path.join(alignment_dir, file_found)
             os.remove(file_found)
@@ -44,8 +50,10 @@ def clean_headers_reference_file(reference_file, outdir, extraSeq, rematch_modul
                 sequences[i]['header'] = sequences[i]['header'].replace(x, '_')
             headers_changed = True
     if headers_changed:
-        utils.Bcolors_print(str('At least one of the those characters was found. Replacing those with _' + '\n'), 'UNDERLINE')
-        new_reference_file = os.path.join(outdir, os.path.splitext(os.path.basename(reference_file))[0] + '.headers_renamed.fasta')
+        utils.Bcolors_print(str('At least one of the those characters was found. Replacing those'
+                                ' with _' + '\n'), 'UNDERLINE')
+        new_reference_file = \
+            os.path.join(outdir, os.path.splitext(os.path.basename(reference_file))[0] + '.headers_renamed.fasta')
         with open(new_reference_file, 'wt') as writer:
             for i in sequences:
                 writer.write('>' + sequences[i]['header'] + '\n')
