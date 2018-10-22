@@ -156,44 +156,6 @@ def include_rematch_dependencies_path():
     return resource_rematch
 
 
-def clean_header(header, problematic_characters):
-    new_header = header
-    if any(x in header for x in problematic_characters):
-        for x in problematic_characters:
-            new_header = new_header.replace(x, '_')
-    return header, new_header
-
-
-def parse_reference(reference, problematic_characters):
-    reference_dict = {}
-    headers_correspondence = {}
-    with open(reference, 'rtU') as reader:
-        header = None
-        sequence = ''
-        for line in reader:
-            line = line.rstrip('\r\n')
-            if len(line) > 0:
-                if line.startswith('>'):
-                    if header is not None:
-                        reference_dict[header] = sequence
-                    original_header, new_header = clean_header(line[1:], problematic_characters)
-                    if new_header in headers_correspondence:
-                        sys.exit('Possible conflicting sequence header in {reference} file:\n'
-                                 '{original_header} header might be the same as {first_header} header after problematic'
-                                 ' characters ({problematic_characters}) replacement (new header: {new_header})'
-                                 ''.format(reference=reference, original_header=original_header,
-                                           first_header=headers_correspondence[new_header],
-                                           problematic_characters=problematic_characters, new_header=new_header))
-                    header = str(new_header)
-                    headers_correspondence[header] = str(original_header)
-                    sequence = ''
-                else:
-                    sequence += line.replace(' ', '').upper()
-        if len(sequence) > 0:
-            reference_dict[header] = sequence
-    return reference_dict, headers_correspondence
-
-
 def rename_duplicated_headers(references_headers, reference, reference_dict, headers_correspondence,
                               problematic_characters):
     renamed_reference_dict, renamed_headers_correspondence, headers_changed = {}, {}, []
@@ -201,10 +163,10 @@ def rename_duplicated_headers(references_headers, reference, reference_dict, hea
         if any(x in references_headers[ref].keys() for x in reference_dict):
             for header in reference_dict:
                 if header in references_headers[ref]:
-                    original_header, new_header = clean_header('_'.join([header,
-                                                                         os.path.basename(reference),
+                    original_header, new_header = utils.clean_header('_'.join([header,
+                                                                               os.path.basename(reference),
                                                                          'SeqTyping']),
-                                                               problematic_characters)
+                                                                     problematic_characters)
                     renamed_reference_dict[new_header] = reference_dict[header]
                     renamed_headers_correspondence[new_header] = headers_correspondence[header]
                     headers_changed.append(header)
@@ -237,7 +199,7 @@ def prepare_references(references, map_ref_together, references_dir):
         references_files.append(ref_file)
 
     for reference in references:
-        reference_dict, headers_correspondence = parse_reference(reference, problematic_characters)
+        reference_dict, headers_correspondence = utils.parse_reference(reference, problematic_characters)
         reference_dict, headers_correspondence = rename_duplicated_headers(references_headers, reference,
                                                                            reference_dict, headers_correspondence,
                                                                            problematic_characters)
@@ -269,9 +231,9 @@ def assembly_subcommand(args):
         msg.append('With --blast option you must provide the --type')
 
     if len(msg) > 0:
-        argparse.ArgumentParser.error('\n'.join(msg))
+        argparse.ArgumentParser(prog='assembly subcommand options').error('\n'.join(msg))
 
-    if args.type == 'nucl':
+    if args.type == 'nucl' or args.type is None:
         utils.required_programs({'blastn': ['-version', '>=', '2.6.0']})
     elif args.type == 'prot':
         utils.required_programs({'blastp': ['-version', '>=', '2.6.0']})
@@ -284,7 +246,7 @@ def assembly_subcommand(args):
         config = parse_config(config)
         if args.type != 'nucl':
             print('\n'
-                  'ATTENTION: Blast DB type provided was not "nucl"'
+                  'ATTENTION: Blast DB type provided was not "nucl"\n'
                   'It was changed to "nucl"'
                   '\n')
         args.type = 'nucl'
@@ -322,7 +284,7 @@ def blast_subcommand(args):
     #     msg.append('--fasta or --org must be provided')
 
     if len(msg) > 0:
-        argparse.ArgumentParser.error('\n'.join(msg))
+        argparse.ArgumentParser(prog='blast subcommand options').error('\n'.join(msg))
 
     utils.required_programs({'makeblastdb': ['-version', '>=', '2.6.0']})
 
@@ -332,7 +294,7 @@ def blast_subcommand(args):
         args.fasta, _ = get_fasta_config(args.org)
         if args.type != 'nucl':
             print('\n'
-                  'ATTENTION: Blast DB type provided was not "nucl"'
+                  'ATTENTION: Blast DB type provided was not "nucl"\n'
                   'It was changed to "nucl"'
                   '\n')
         args.type = 'nucl'
@@ -578,7 +540,7 @@ def python_arguments(program_name, version):
                                                 ' with seq_typing.py for typing',
                                            action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
-    parser_assembly_optional_reference = parser_assembly.add_argument_group('General facultative options')
+    parser_assembly_optional_reference = parser_assembly.add_argument_group('Required option for --blast')
     parser_assembly_optional_reference.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
                                                     help='Blast DB type (available options: %(choices)s)')
 
@@ -653,7 +615,7 @@ def main():
         msg.append('--minGeneIdentity should be a value between [0, 100]')
 
     if len(msg) > 0:
-        argparse.ArgumentParser.error('\n'.join(msg))
+        argparse.ArgumentParser(prog='{} options'.format(program_name)).error('\n'.join(msg))
 
     start_time = time.time()
 

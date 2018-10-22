@@ -33,7 +33,7 @@ try:
     import modules.utils as utils
     import modules.parse_results as parse_results
 
-    from seq_typing import python_arguments
+    from seq_typing import python_arguments as python_arguments
 except ImportError:
     from seqtyping.modules import utils as utils
     from seqtyping.modules import parse_results as parse_results
@@ -147,7 +147,7 @@ def main():
         msg.append('Use "--org stx subtyping" with {}'.format(program_name))
 
     if len(msg) > 0:
-        argparse.ArgumentParser.error('\n'.join(msg))
+        argparse.ArgumentParser(prog='{} options'.format(program_name)).error('\n'.join(msg))
 
     start_time = time.time()
 

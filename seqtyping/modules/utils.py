@@ -398,3 +398,41 @@ class Bcolors_print(object):
     def __init__(self, string, color_code):
         # self.string_bcolors = self.colours[color_code] + string + self.colours['ENDC']
         print(self.colours[color_code] + string + self.colours['ENDC'])
+
+
+def clean_header(header, problematic_characters):
+    new_header = header
+    if any(x in header for x in problematic_characters):
+        for x in problematic_characters:
+            new_header = new_header.replace(x, '_')
+    return header, new_header
+
+
+def parse_reference(reference, problematic_characters):
+    reference_dict = {}
+    headers_correspondence = {}
+    with open(reference, 'rtU') as reader:
+        header = None
+        sequence = ''
+        for line in reader:
+            line = line.rstrip('\r\n')
+            if len(line) > 0:
+                if line.startswith('>'):
+                    if header is not None:
+                        reference_dict[header] = sequence
+                    original_header, new_header = clean_header(line[1:], problematic_characters)
+                    if new_header in headers_correspondence:
+                        sys.exit('Possible conflicting sequence header in {reference} file:\n'
+                                 '{original_header} header might be the same as {first_header} header after problematic'
+                                 ' characters ({problematic_characters}) replacement (new header: {new_header})'
+                                 ''.format(reference=reference, original_header=original_header,
+                                           first_header=headers_correspondence[new_header],
+                                           problematic_characters=problematic_characters, new_header=new_header))
+                    header = str(new_header)
+                    headers_correspondence[header] = str(original_header)
+                    sequence = ''
+                else:
+                    sequence += line.replace(' ', '').upper()
+        if len(sequence) > 0:
+            reference_dict[header] = sequence
+    return reference_dict, headers_correspondence

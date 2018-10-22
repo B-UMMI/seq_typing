@@ -1,8 +1,8 @@
-import pathotyping
+import seqtyping
 
 from setuptools import setup
 
-VERSION = pathotyping.__version__
+VERSION = seqtyping.__version__
 
 with open('README.md') as fh:
     README = fh.read()
@@ -13,8 +13,8 @@ setup(
     packages=['seqtyping',
               'seqtyping.modules'],
     package_dir={'seqtyping': 'seqtyping'},
-    package_data={'pathotyping': ['../.git/*', '../.git/*/*', '../.git/*/*/*',
-                                  'reference_sequences/*/*']},
+    package_data={'seqtyping': ['../.git/*', '../.git/*/*', '../.git/*/*/*',
+                                'reference_sequences/*/*']},
     include_package_data=True,
     data_files=[('', ['LICENSE'])],
     install_requires=[

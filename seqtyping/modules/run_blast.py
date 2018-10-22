@@ -280,9 +280,7 @@ def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
 
     # Run Blast
     if db_exists and original_file:
-        sys.path.append('..')
-        from seq_typing import parse_reference
-        _, headers_correspondence = parse_reference(blast_db_path, [])
+        _, headers_correspondence = utils.parse_reference(blast_db_path, [])
 
         blast_output = os.path.join(outdir, 'blast_out', 'results.tab')
         folders_2_remove.append(os.path.dirname(blast_output))
