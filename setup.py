@@ -13,7 +13,7 @@ setup(
     packages=['seqtyping',
               'seqtyping.modules'],
     package_dir={'seqtyping': 'seqtyping'},
-    package_data={'pathotyping': ['../.git/*', '../.git/*/*', '../.git/*/*/*',
+    package_data={'seqtyping': ['../.git/*', '../.git/*/*', '../.git/*/*/*',
                                   'reference_sequences/*/*']},
     include_package_data=True,
     data_files=[('', ['LICENSE'])],
