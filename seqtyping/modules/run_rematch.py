@@ -2,12 +2,18 @@ from functools import partial
 import os
 import sys
 
-import modules.utils as utils
+try:
+    import modules.utils as utils
+except ImportError:
+    from seqtyping.modules import utils as utils
 
 
 def remove_alignment(alignment_dir):
     if os.path.isdir(alignment_dir):
-        files = [f for f in os.listdir(alignment_dir) if not f.startswith('.') and os.path.isfile(os.path.join(alignment_dir, f)) and f.endswith(('.bam', '.sam', '.cram'))]
+        files = [f for f in os.listdir(alignment_dir) if
+                 not f.startswith('.') and
+                 os.path.isfile(os.path.join(alignment_dir, f)) and
+                 f.endswith(('.bam', '.sam', '.cram'))]
         for file_found in files:
             file_found = os.path.join(alignment_dir, file_found)
             os.remove(file_found)
@@ -44,8 +50,10 @@ def clean_headers_reference_file(reference_file, outdir, extraSeq, rematch_modul
                 sequences[i]['header'] = sequences[i]['header'].replace(x, '_')
             headers_changed = True
     if headers_changed:
-        utils.Bcolors_print(str('At least one of the those characters was found. Replacing those with _' + '\n'), 'UNDERLINE')
-        new_reference_file = os.path.join(outdir, os.path.splitext(os.path.basename(reference_file))[0] + '.headers_renamed.fasta')
+        utils.Bcolors_print(str('At least one of the those characters was found. Replacing those'
+                                ' with _' + '\n'), 'UNDERLINE')
+        new_reference_file = \
+            os.path.join(outdir, os.path.splitext(os.path.basename(reference_file))[0] + '.headers_renamed.fasta')
         with open(new_reference_file, 'wt') as writer:
             for i in sequences:
                 writer.write('>' + sequences[i]['header'] + '\n')
@@ -66,10 +74,10 @@ def rematch_for_different_references(fastq, references_files, threads, outdir, e
         reference_file, gene_list_reference, reference_dict = clean_headers_reference_file(reference, ref_dir, extraSeq,
                                                                                            rematch_module)
         time_taken, run_successfully, data_by_gene, sample_data_general, consensus_files, consensus_sequences = \
-            rematch_module.runRematchModule('sample', fastq, reference_file, threads, ref_dir, extraSeq, minCovPresence,
-                                            minCovCall, minFrequencyDominantAllele, minGeneCoverage, False, debug, 1,
-                                            minGeneIdentity, 'first', 7, 'none', reference_dict, 'X', None,
-                                            gene_list_reference, not doNotRemoveConsensus)
+            rematch_module.run_rematch_module('sample', fastq, reference_file, threads, ref_dir, extraSeq,
+                                              minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage,
+                                              False, debug, 1, minGeneIdentity, 'first', 7, 'none', reference_dict, 'X',
+                                              None, gene_list_reference, not doNotRemoveConsensus)
         if run_successfully:
             pickleFile = os.path.join(outdir, str(reference_name + '.pkl'))
             utils.saveVariableToPickle(data_by_gene, pickleFile)
@@ -92,9 +100,7 @@ def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraS
     utils.removeDirectory(module_dir)
     os.makedirs(module_dir)
 
-    sys.path.append(os.path.join(os.path.dirname(rematch_script), 'modules', ''))
-    from past import autotranslate
-    autotranslate(['rematch_module', 'utils'])
+    sys.path.append(os.path.join(os.path.dirname(rematch_script), 'modules'))
     import rematch_module
 
     references_results = rematch_for_different_references(fastq, references_files, threads, module_dir, extraSeq,

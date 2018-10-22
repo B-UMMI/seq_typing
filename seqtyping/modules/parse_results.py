@@ -1,7 +1,10 @@
 import os.path
 from functools import partial
 
-import modules.utils as utils
+try:
+    import modules.utils as utils
+except ImportError:
+    from seqtyping.modules import utils as utils
 
 
 extra_blast_fields = ['query', 'q_start', 'q_end', 's_start', 's_end', 'evalue']

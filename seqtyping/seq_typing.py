@@ -9,7 +9,7 @@ in a given sample
 
 Copyright (C) 2018 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: September 24, 2018
+Last modified: October 15, 2018
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,13 +29,22 @@ import argparse
 import os
 import time
 import sys
+from pkg_resources import resource_filename
 
-import modules.utils as utils
-import modules.run_rematch as run_rematch
-import modules.parse_results as parse_results
-import modules.run_blast as run_blast
+try:
+    from __init__ import __version__
 
-version = '2.0'
+    import modules.utils as utils
+    import modules.run_rematch as run_rematch
+    import modules.parse_results as parse_results
+    import modules.run_blast as run_blast
+except ImportError:
+    from seqtyping.__init__ import __version__
+
+    from seqtyping.modules import utils as utils
+    from seqtyping.modules import run_rematch as run_rematch
+    from seqtyping.modules import parse_results as parse_results
+    from seqtyping.modules import run_blast as run_blast
 
 
 def parse_config(config_file):
@@ -90,7 +99,7 @@ def get_fasta_config(species):
     fasta = []
     config = None
 
-    file_path = os.path.abspath(__file__)
+    file_path = os.path.abspath(os.path.realpath(__file__))
     species_folder = os.path.join(os.path.dirname(file_path), 'reference_sequences', '_'.join(species), '')
 
     files = [f for f in os.listdir(species_folder) if not f.startswith('.') and
@@ -115,7 +124,7 @@ def get_species_allowed():
         List with species names, e.g. ['escherichia coli', 'streptococcus agalactiae']
     """
 
-    file_path = os.path.abspath(__file__)
+    file_path = os.path.abspath(os.path.realpath(__file__))
     serotyping_folder = os.path.join(os.path.dirname(file_path), 'reference_sequences', '')
     species = [d.replace('_', ' ') for d in os.listdir(serotyping_folder) if not d.startswith('.') and
                os.path.isdir(os.path.join(serotyping_folder, d))]
@@ -123,52 +132,28 @@ def get_species_allowed():
 
 
 def include_rematch_dependencies_path():
+    original_rematch = None
     command = ['which', 'rematch.py']
     run_successfully, stdout, stderr = utils.runCommandPopenCommunicate(command, False, None, False)
     if run_successfully:
-        rematch_script = stdout.splitlines()[0]
-        utils.setPATHvariable(False, rematch_script)
-        return rematch_script
+        original_rematch = stdout.splitlines()[0]
+
+    resource_rematch = None
+    try:
+        resource_rematch = resource_filename('ReMatCh', 'rematch.py')
+    except ModuleNotFoundError:
+        resource_rematch = original_rematch
+    else:
+        print('\n'
+              'Using ReMatCh "{resource_rematch}" via "{original_rematch}"\n'.format(resource_rematch=resource_rematch,
+                                                                                     original_rematch=original_rematch))
+
+    if resource_rematch is not None:
+        utils.setPATHvariable(False, resource_rematch)
     else:
         sys.exit('ReMatCh not found in the PATH')
 
-
-def clean_header(header, problematic_characters):
-    new_header = header
-    if any(x in header for x in problematic_characters):
-        for x in problematic_characters:
-            new_header = new_header.replace(x, '_')
-    return header, new_header
-
-
-def parse_reference(reference, problematic_characters):
-    reference_dict = {}
-    headers_correspondence = {}
-    with open(reference, 'rtU') as reader:
-        header = None
-        sequence = ''
-        for line in reader:
-            line = line.rstrip('\r\n')
-            if len(line) > 0:
-                if line.startswith('>'):
-                    if header is not None:
-                        reference_dict[header] = sequence
-                    original_header, new_header = clean_header(line[1:], problematic_characters)
-                    if new_header in headers_correspondence:
-                        sys.exit('Possible conflicting sequence header in {reference} file:\n'
-                                 '{original_header} header might be the same as {first_header} header after problematic'
-                                 ' characters ({problematic_characters}) replacement (new header: {new_header})'
-                                 ''.format(reference=reference, original_header=original_header,
-                                           first_header=headers_correspondence[new_header],
-                                           problematic_characters=problematic_characters, new_header=new_header))
-                    header = str(new_header)
-                    headers_correspondence[header] = str(original_header)
-                    sequence = ''
-                else:
-                    sequence += line.replace(' ', '').upper()
-        if len(sequence) > 0:
-            reference_dict[header] = sequence
-    return reference_dict, headers_correspondence
+    return resource_rematch
 
 
 def rename_duplicated_headers(references_headers, reference, reference_dict, headers_correspondence,
@@ -178,10 +163,10 @@ def rename_duplicated_headers(references_headers, reference, reference_dict, hea
         if any(x in references_headers[ref].keys() for x in reference_dict):
             for header in reference_dict:
                 if header in references_headers[ref]:
-                    original_header, new_header = clean_header('_'.join([header,
-                                                                         os.path.basename(reference),
+                    original_header, new_header = utils.clean_header('_'.join([header,
+                                                                               os.path.basename(reference),
                                                                          'SeqTyping']),
-                                                               problematic_characters)
+                                                                     problematic_characters)
                     renamed_reference_dict[new_header] = reference_dict[header]
                     renamed_headers_correspondence[new_header] = headers_correspondence[header]
                     headers_changed.append(header)
@@ -214,7 +199,7 @@ def prepare_references(references, map_ref_together, references_dir):
         references_files.append(ref_file)
 
     for reference in references:
-        reference_dict, headers_correspondence = parse_reference(reference, problematic_characters)
+        reference_dict, headers_correspondence = utils.parse_reference(reference, problematic_characters)
         reference_dict, headers_correspondence = rename_duplicated_headers(references_headers, reference,
                                                                            reference_dict, headers_correspondence,
                                                                            problematic_characters)
@@ -246,9 +231,9 @@ def assembly_subcommand(args):
         msg.append('With --blast option you must provide the --type')
 
     if len(msg) > 0:
-        argparse.ArgumentParser.error('\n'.join(msg))
+        argparse.ArgumentParser(prog='assembly subcommand options').error('\n'.join(msg))
 
-    if args.type == 'nucl':
+    if args.type == 'nucl' or args.type is None:
         utils.required_programs({'blastn': ['-version', '>=', '2.6.0']})
     elif args.type == 'prot':
         utils.required_programs({'blastp': ['-version', '>=', '2.6.0']})
@@ -261,7 +246,7 @@ def assembly_subcommand(args):
         config = parse_config(config)
         if args.type != 'nucl':
             print('\n'
-                  'ATTENTION: Blast DB type provided was not "nucl"'
+                  'ATTENTION: Blast DB type provided was not "nucl"\n'
                   'It was changed to "nucl"'
                   '\n')
         args.type = 'nucl'
@@ -299,7 +284,7 @@ def blast_subcommand(args):
     #     msg.append('--fasta or --org must be provided')
 
     if len(msg) > 0:
-        argparse.ArgumentParser.error('\n'.join(msg))
+        argparse.ArgumentParser(prog='blast subcommand options').error('\n'.join(msg))
 
     utils.required_programs({'makeblastdb': ['-version', '>=', '2.6.0']})
 
@@ -309,7 +294,7 @@ def blast_subcommand(args):
         args.fasta, _ = get_fasta_config(args.org)
         if args.type != 'nucl':
             print('\n'
-                  'ATTENTION: Blast DB type provided was not "nucl"'
+                  'ATTENTION: Blast DB type provided was not "nucl"\n'
                   'It was changed to "nucl"'
                   '\n')
         args.type = 'nucl'
@@ -355,7 +340,7 @@ def reads_subcommand(args):
 
     rematch_script = include_rematch_dependencies_path()
 
-    utils.required_programs({'rematch.py': ['--version', '>=', '3.2']})
+    utils.required_programs({'rematch.py': ['--version', '>=', '4.0']})
 
     args.fastq = [os.path.abspath(fastq.name) for fastq in args.fastq]
 
@@ -472,7 +457,8 @@ def python_arguments(program_name, version):
                                              ' the same order that the type must be determined.')
     parser_reads_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the organism with reference sequences provided together'
-                                             ' with {} for typing ("reference_sequences" folder)'.format(parser.prog),
+                                             ' with {} for typing ("seqtyping/reference_sequences/"'
+                                             ' folder)'.format(parser.prog),
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
@@ -551,11 +537,11 @@ def python_arguments(program_name, version):
                                                 ' Give the files in the same order that the type must be determined.')
     parser_assembly_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                            help='Name of the organism with DB sequence file provided'
-                                                ' ("reference_sequences" folder) together'
+                                                ' ("seqtyping/reference_sequences/" folder) together'
                                                 ' with seq_typing.py for typing',
                                            action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
-    parser_assembly_optional_reference = parser_assembly.add_argument_group('General facultative options')
+    parser_assembly_optional_reference = parser_assembly.add_argument_group('Required option for --blast')
     parser_assembly_optional_reference.add_argument('-t', '--type', choices=['nucl', 'prot'], type=str, metavar='nucl',
                                                     help='Blast DB type (available options: %(choices)s)')
 
@@ -597,7 +583,7 @@ def python_arguments(program_name, version):
                                              ' each file will be created.')
     parser_blast_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the organism with DB sequence file provided'
-                                             ' ("reference_sequences" folder) together'
+                                             ' ("seqtyping/reference_sequences/" folder) together'
                                              ' with seq_typing.py for typing',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
@@ -615,10 +601,12 @@ def python_arguments(program_name, version):
 
 
 def main():
-    if sys.version_info[0] < 3:
-        sys.exit('Must be using Python 3. Try calling "python3 seq_typing.py"')
+    program_name = 'seq_typing.py'
 
-    parser, _, _, _ = python_arguments('seq_typing.py', version)
+    if sys.version_info[0] < 3:
+        sys.exit('Must be using Python 3. Try calling "python3 {}"'.format(program_name))
+
+    parser, _, _, _ = python_arguments(program_name, __version__)
     args = parser.parse_args()
 
     msg = []
@@ -628,7 +616,7 @@ def main():
         msg.append('--minGeneIdentity should be a value between [0, 100]')
 
     if len(msg) > 0:
-        argparse.ArgumentParser.error('\n'.join(msg))
+        argparse.ArgumentParser(prog='{} options'.format(program_name)).error('\n'.join(msg))
 
     start_time = time.time()
 
@@ -639,7 +627,8 @@ def main():
     # Start logger
     logfile, time_str = utils.start_logger(args.outdir)
 
-    script_path = utils.general_information(logfile, version, args.outdir, time_str)
+    script_path = utils.general_information(script_name=program_name, logfile=logfile, version=__version__,
+                                            outdir=args.outdir, time_str=time_str)
     del script_path
     print('\n')
 
