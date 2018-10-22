@@ -62,10 +62,9 @@ _OR_
 </html>
 
 * Python 3
-* Fastq files:
-  * Python module _**future**_
+* For fastq files:
   * [ReMatCh](https://github.com/B-UMMI/ReMatCh)
-* Fasta file:
+* For fasta file:
   * [Blast+](https://www.ncbi.nlm.nih.gov/books/NBK279690/)
 
 For _get_stx_db.py_ script:
@@ -78,22 +77,12 @@ For _get_stx_db.py_ script:
  </div>
 </html>
 
-Python using [Conda](https://conda.io/) (Python 3, with _future_ and Biopython modules):
-
-```bash
-conda create --name seq_typing python=3 future biopython
-```
 
 ReMatCh:
 ```bash
 git clone https://github.com/B-UMMI/ReMatCh.git
 cd ReMatCh
-
-# Temporarily add ReMatCh to the PATH
-export PATH="$(pwd -P):$PATH"
-
-# Permanently add ReMatCh to the PATH
-echo export PATH="$(pwd -P):$PATH" >> ~/.profile
+python3 setup.py install
 ```
 
 Blast+:
@@ -120,12 +109,7 @@ echo export PATH="$(pwd -P):$PATH" >> ~/.profile
 ```bash
 git clone https://github.com/B-UMMI/seq_typing.git
 cd seq_typing
-
-# Temporarily add seq_typing to the PATH
-export PATH="$(pwd -P):$PATH"
-
-# Permanently add seq_typing to the PATH
-echo export PATH="$(pwd -P):$PATH" >> ~/.profile
+python3 setup.py install
 ```
 
 ## Usage
@@ -205,7 +189,7 @@ Required one of the following options:
   --org escherichia coli
                         Name of the organism with reference sequences provided
                         together with seq_typing.py for typing
-                        ("reference_sequences" folder)
+                        ("seqtyping/reference_sequences/" folder)
 
 General facultative options:
   -o --outdir /path/to/output/directory/
@@ -264,7 +248,7 @@ Required one of the following options:
                         passed, a Blast DB for each file will be created.
   --org escherichia coli
                         Name of the organism with DB sequence file provided
-                        ("reference_sequences" folder) together with
+                        ("seqtyping/reference_sequences/" folder) together with
                         seq_typing.py for typing
 
 Required option for --fasta:
@@ -317,7 +301,7 @@ Required one of the following options:
                         in the same order that the type must be determined.
   --org escherichia coli
                         Name of the organism with DB sequence file provided
-                        ("reference_sequences" folder) together with
+                        ("seqtyping/reference_sequences/" folder) together with
                         seq_typing.py for typing
 
 Required option for --blast:
@@ -365,9 +349,6 @@ Use `--org` option with one of those organisms
 
 Serotyping _Haemophilus influenzae_ using provided references sequences (that uses only one reference sequences file):
 ```bash
-# Activate Conda environment (when using Python via Conda environment)
-source activate seq_typing
-
 seq_typing.py reads --org Haemophilus influenzae \
                     --fastq sample_1.fq.gz sample_2.fq.gz \
                     --outdir sample_out/ \
@@ -376,9 +357,6 @@ seq_typing.py reads --org Haemophilus influenzae \
 
 Serotyping _Escherichia coli_ using provided references sequences (that uses two reference sequences files):
 ```bash
-# Activate Conda environment (when using Python via Conda environment)
-source activate seq_typing
-
 seq_typing.py reads --org Escherichia coli \
                     --fastq sample_1.fq.gz sample_2.fq.gz \
                     --outdir sample_out/ \
@@ -388,9 +366,6 @@ seq_typing.py reads --org Escherichia coli \
 
 Type one sample with a users own set of references sequences (using for example single-end reads):
 ```bash
-# Activate Conda environment (when using Python via Conda environment)
-source activate seq_typing
-
 seq_typing.py reads --reference references/Ecoli/O_type.fasta references/Ecoli/H_type.fasta \
                     --fastq sample.fq.gz \
                     --outdir sample_out/ \
@@ -407,9 +382,6 @@ seq_typing.py reads --reference references/Ecoli/O_type.fasta references/Ecoli/H
 
 Type _Dengue virus_ using assemblies with provided reference sequences (uses only one reference sequences file):
 ```bash
-# Activate Conda environment (when using Python via Conda environment)
-source activate seq_typing
-
 seq_typing.py assembly --org Dengue virus \
                        --fasta sample.fasta \
                        --outdir sample_out/ \
@@ -419,9 +391,6 @@ seq_typing.py assembly --org Dengue virus \
 When running the same database for different samples, a single Blast database should be produce first to speed up the analysis.  
 Example using _Escherichia coli_ provided reference sequences (that uses two reference sequences files):
 ```bash
-# Activate Conda environment (when using Python via Conda environment)
-source activate seq_typing
-
 seq_typing.py blast --org Escherichia coli \
                     --outdir db_out/
 
@@ -437,9 +406,6 @@ For users own reference sequences files, **seq_typing** requires the constructio
 
 Run **seq_typing** without previous construction of reference database:
 ```bash
-# Activate Conda environment (when using Python via Conda environment)
-source activate seq_typing
-
 seq_typing.py assembly --blast references/O_type.fasta references/H_type.fasta \
                        --type nucl \
                        --fasta sample.fasta \
@@ -652,7 +618,7 @@ To construct stx subtypes Blast DB, proceed as described [here](#assemblies):
  </div>
 </html>
 
-An updated stx subtyping reference sequences can be obtained from [VirulenceFinder DB Bitbucket account](https://bitbucket.org/genomicepidemiology/virulencefinder_db). A specific script was created to get the most recent stx reference sequences and can be found inside _modules_ directory.
+An updated stx subtyping reference sequences can be obtained from [VirulenceFinder DB Bitbucket account](https://bitbucket.org/genomicepidemiology/virulencefinder_db). A specific script was created to get the most recent stx reference sequences.
 ```
 usage: get_stx_db.py [-h] [--version]
                      [-o /path/to/output/directory/]
@@ -671,10 +637,7 @@ General facultative options:
 
 Usage example
 ```bash
-# Activate Conda environment (when using Python via Conda environment)
-source activate seq_typing
-
-modules/get_stx_db.py --outdir /path/output/directory/
+get_stx_db.py --outdir /path/output/directory/
 ```
 
 ## Outputs

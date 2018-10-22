@@ -457,7 +457,8 @@ def python_arguments(program_name, version):
                                              ' the same order that the type must be determined.')
     parser_reads_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the organism with reference sequences provided together'
-                                             ' with {} for typing ("reference_sequences" folder)'.format(parser.prog),
+                                             ' with {} for typing ("seqtyping/reference_sequences/"'
+                                             ' folder)'.format(parser.prog),
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
@@ -536,7 +537,7 @@ def python_arguments(program_name, version):
                                                 ' Give the files in the same order that the type must be determined.')
     parser_assembly_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                            help='Name of the organism with DB sequence file provided'
-                                                ' ("reference_sequences" folder) together'
+                                                ' ("seqtyping/reference_sequences/" folder) together'
                                                 ' with seq_typing.py for typing',
                                            action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
@@ -582,7 +583,7 @@ def python_arguments(program_name, version):
                                              ' each file will be created.')
     parser_blast_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the organism with DB sequence file provided'
-                                             ' ("reference_sequences" folder) together'
+                                             ' ("seqtyping/reference_sequences/" folder) together'
                                              ' with seq_typing.py for typing',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
