@@ -229,6 +229,10 @@ def assembly_subcommand(args):
     #     msg.append('--blast or --org must be provided')
     if args.blast is not None and args.type is None:
         msg.append('With --blast option you must provide the --type')
+    if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
+        msg.append('--minGeneCoverage should be a value between [0, 100]')
+    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
+        msg.append('--minGeneIdentity should be a value between [0, 100]')
 
     if len(msg) > 0:
         argparse.ArgumentParser(prog='assembly subcommand options').error('\n'.join(msg))
@@ -335,8 +339,16 @@ def blast_subcommand(args):
 
 
 def reads_subcommand(args):
+    msg = []
     # if args.reference is None and args.org is None:
     #     argparse.ArgumentParser.error('--reference or --org must be provided')
+    if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
+        msg.append('--minGeneCoverage should be a value between [0, 100]')
+    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
+        msg.append('--minGeneIdentity should be a value between [0, 100]')
+
+    if len(msg) > 0:
+        argparse.ArgumentParser(prog='assembly subcommand options').error('\n'.join(msg))
 
     rematch_script = include_rematch_dependencies_path()
 
@@ -608,15 +620,6 @@ def main():
 
     parser, _, _, _ = python_arguments(program_name, __version__)
     args = parser.parse_args()
-
-    msg = []
-    if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
-        msg.append('--minGeneCoverage should be a value between [0, 100]')
-    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
-        msg.append('--minGeneIdentity should be a value between [0, 100]')
-
-    if len(msg) > 0:
-        argparse.ArgumentParser(prog='{} options'.format(program_name)).error('\n'.join(msg))
 
     start_time = time.time()
 
