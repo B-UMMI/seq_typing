@@ -84,6 +84,9 @@ git clone https://github.com/B-UMMI/ReMatCh.git
 cd ReMatCh
 python3 setup.py install
 ```
+*__NOTE__*:  
+If you don't have permission for global system installation, try the following _install_ command instead:  
+`python3 setup.py install --user`
 
 Blast+:
 ```bash
@@ -111,6 +114,9 @@ git clone https://github.com/B-UMMI/seq_typing.git
 cd seq_typing
 python3 setup.py install
 ```
+*__NOTE__*:  
+If you don't have permission for global system installation, try the following _install_ command instead:  
+`python3 setup.py install --user`
 
 ## Usage
 
