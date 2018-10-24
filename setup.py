@@ -1,6 +1,16 @@
+import os
+from setuptools import setup
+
 import seqtyping
 
-from setuptools import setup
+
+def package_files(directory):
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            paths.append(os.path.join('..', path, filename))
+    return paths
+
 
 VERSION = seqtyping.__version__
 
@@ -13,8 +23,8 @@ setup(
     packages=['seqtyping',
               'seqtyping.modules'],
     package_dir={'seqtyping': 'seqtyping'},
-    package_data={'seqtyping': ['../.git/*', '../.git/*/*', '../.git/*/*/*',
-                                'reference_sequences/*/*']},
+    package_data={'seqtyping': package_files('.git') +
+                               ['reference_sequences/*/*']},
     include_package_data=True,
     data_files=[('', ['LICENSE'])],
     install_requires=[
