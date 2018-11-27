@@ -25,6 +25,7 @@ Determines which reference sequence is more likely to be present in a given samp
       * [Assembly](#ecoli_stx_subtyping-assembly)
       * [Blast](#blast)
     * [Update stx references](#update-stx-references)
+  * [Container](#container)
 * [Outputs](#outputs)
   * [seq_typing.py](#seq_typingpy)
   * [ecoli_stx_subtyping.py](#ecoli_stx_subtypingpy)
@@ -645,6 +646,23 @@ Usage example
 ```bash
 get_stx_db.py --outdir /path/output/directory/
 ```
+
+### Container
+<html>
+ <div align="right">
+  <a href="#seq_typing">Back to top</a><br>
+ </div>
+</html>
+
+**_What is a (_**[Docker](https://www.docker.com/)**_) container?_**
+
+> "(...) is a tool that can package an application and its dependencies in a virtual container that can run on any Linux server," Lyman explained. "This helps enable flexibility and portability on where the application can run, whether on premise, public cloud, private cloud, bare metal, etc." From [here](https://www.linux.com/news/docker-shipping-container-linux-code).
+
+**_Why are containers useful?_**
+
+> "(...) Docker containers technology allows you to write self-contained and truly reproducible computational pipelines." From [here](https://www.nextflow.io/docs/latest/docker.html).
+
+For detailed information on how to run **seq_typing** using containers, please check [here](./Docker/README.md).
 
 ## Outputs
 
