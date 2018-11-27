@@ -37,7 +37,7 @@ from Bio.SeqRecord import SeqRecord
 from itertools import product
 
 try:
-    import utils
+    import modules.utils as utils
 except ImportError:
     try:
         from seqtyping.modules import utils as utils
