@@ -39,7 +39,10 @@ from itertools import product
 try:
     import utils
 except ImportError:
-    from seqtyping.modules import utils as utils
+    try:
+        from seqtyping.modules import utils as utils
+    except ImportError:
+        import utils
 
 
 version = '1.1'
