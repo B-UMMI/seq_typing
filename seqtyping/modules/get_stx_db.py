@@ -39,10 +39,13 @@ from itertools import product
 try:
     import modules.utils as utils
 except ImportError:
-    from seqtyping.modules import utils as utils
+    try:
+        from seqtyping.modules import utils as utils
+    except ImportError:
+        import utils
 
 
-version = '1.0'
+version = '1.1'
 
 
 def extend_ambiguous_dna(seq):
@@ -85,7 +88,7 @@ def main():
 
     parser_optional_general = parser.add_argument_group('General facultative options')
     parser_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                         help='Path to the directory where the sequences will be stored (default: ./)',
+                                         help='Path to the directory where the sequences will be stored',
                                          required=False, default='.')
 
     args = parser.parse_args()
@@ -117,6 +120,18 @@ def main():
                 if len(subtype) == 4:
                     if seq.id[:4] not in stx_seq:
                         stx_seq[seq.id[:4]] = []
+
+                    '''
+                    Jani
+                    
+                    After spending what seemed to be an endless amount of hours trying to solve the STEC stx subtype
+                    mystery I've come to the following conclusion. For the platform we need to combine in the target db
+                    stx2a,  stx2c and  stx2d as one subtype called stx2acd. This is due to the fact that all of these
+                    subtypes are the most potent ones to cause HUS and cannot be separated from each other by the
+                    methods in use right now.
+                    '''
+                    if subtype[0][:4] == 'stx2' and subtype[3] in ['a', 'c', 'd']:
+                        subtype[3] = 'acd'
 
                     subtype = subtype[0][:4] + subtype[3]  # Define subtype
                     # if subtype not in stx_seq[seq_name[3]]:
