@@ -1,13 +1,13 @@
 FROM ubuntu:16.04
 MAINTAINER Miguel Machado <mpmachado@medicina.ulisboa.pt>
-    LABEL version="2.1.2-01"
+    LABEL version="2.1.2-02"
 
 WORKDIR /NGStools/
 
 RUN apt-get update
 
 # -- General Dependencies ---
-RUN apt-get install -y wget git python3 python3-pip && \
+RUN apt-get install -y wget git python python3 python3-pip && \
     pip3 install setuptools
 
 # -- seq_typing Dependencies ---
