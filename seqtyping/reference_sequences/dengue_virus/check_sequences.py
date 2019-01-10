@@ -60,16 +60,29 @@ def main():
     fasta_file = '1_GenotypesDENV_14-05-18.fasta'
 
     # Get sequences
-    sequences = {}
+    sequences = {'no_subtype': [], 'iupac_code': [], 'impossible_iupac_code': [], 'with_underscore': [], 'normal': []}
     allowed_chars = set('ATGC')
     with_gap = 0
+
+    seq_by_serotype = {}
+    seq_with_different_length = []
+
     for seq in SeqIO.parse(fasta_file, 'fasta'):
         if not seq.id.lower().split('|')[4].startswith('subtype:'):
-            if 'no_subtype' not in sequences:
-                sequences['no_subtype'] = []
             print('NO SUBTYPE', seq.id)
             sequences['no_subtype'].append(seq)
         else:
+            seq_type = seq.id.split('|')[4].lstrip('Subtype:').rstrip(' ').rstrip('-')
+            serotype = seq_type.split('-')[0]
+            genotype = seq_type.split('-')[1] if len(seq_type.split('-')) == 2 else None
+            if genotype is not None:
+                if genotype == 'Cosmopolotan':
+                    genotype = 'Cosmopolitan'
+                seq_type = '{serotype}-{genotype}'.format(serotype=serotype, genotype=genotype)
+
+            if serotype not in seq_by_serotype:
+                seq_by_serotype[serotype] = []
+
             if not set(seq.seq.upper()).issubset(set('-')):
                 seq = SeqRecord(Seq.Seq(str(seq.seq).replace('-', ''), generic_dna),
                                 id='{seq_name}|gaps_removed'.format(seq_name=seq.id),
@@ -77,32 +90,41 @@ def main():
                 with_gap += 1
 
             if not set(seq.seq.upper()).issubset(allowed_chars):
-                if 'iupac_code' not in sequences:
-                    sequences['iupac_code'] = []
                 # print('IUPAC CODES', seq.id, set(seq.seq.upper()))
                 all_possible_sequences = extend_ambiguous_dna(seq.seq.upper())
                 if all_possible_sequences is not None:
                     seq = SeqRecord(Seq.Seq(all_possible_sequences[0], generic_dna),
-                                    id='{seq_name}|IUPAC_codes_removed'.format(seq_name=seq.id),
+                                    id='{seq_name}|IUPAC_codes_removed|seqTyping_{subtype}'.format(seq_name=seq.id,
+                                                                                                   subtype=seq_type),
                                     description='')  # Change the sequence
                     sequences['iupac_code'].append(seq)
+
+                    if len(seq_by_serotype[serotype]) > 0:
+                        if len(seq) == len(seq_by_serotype[serotype][0]):
+                            seq_by_serotype[serotype].append(seq)
+                        else:
+                            seq_with_different_length.append(serotype)
+                    else:
+                        seq_by_serotype[serotype].append(seq)
                 else:
-                    if 'impossible_iupac_code' not in sequences:
-                        sequences['impossible_iupac_code'] = []
                     sequences['impossible_iupac_code'].append(seq)
             else:
                 seq.id = '{seq_name}|seqTyping_{subtype}'.format(seq_name=seq.id,
-                                                                 subtype=seq.id.split('|')[4].lstrip('Subtype:'))
+                                                                 subtype=seq_type)
                 seq.description = ''  # To avoid description to be print in outfile
                 if len(seq.id.split('|')[4].split('_')) > 1:
-                    if 'with_underscore' not in sequences:
-                        sequences['with_underscore'] = []
                     # print('WITH UNDERSCORE', seq.id)
                     sequences['with_underscore'].append(seq)
                 else:
-                    if 'normal' not in sequences:
-                        sequences['normal'] = []
                     sequences['normal'].append(seq)
+
+                    if len(seq_by_serotype[serotype]) > 0:
+                        if len(seq) == len(seq_by_serotype[serotype][0]):
+                            seq_by_serotype[serotype].append(seq)
+                        else:
+                            seq_with_different_length.append(serotype)
+                    else:
+                        seq_by_serotype[serotype].append(seq)
 
     print('gap', with_gap)
     for type_seq, seqs in sequences.items():
@@ -111,6 +133,14 @@ def main():
     # Write files
     with open(fasta_file + '.no_gap_iupac.fasta', 'wt', newline='\n') as writer:
         _ = SeqIO.write(sequences['normal'] + sequences['iupac_code'], writer, 'fasta')
+
+    for serotype in seq_by_serotype:
+        with open(fasta_file + '.no_gap_iupac.{sero}.fasta'.format(sero=serotype), 'wt', newline='\n') as writer:
+            _ = SeqIO.write(seq_by_serotype[serotype], writer, 'fasta')
+
+    if len(seq_with_different_length) > 0:
+        print('WARNING: sequences with different lengths in the following serotypes:')
+        print(Counter(seq_with_different_length))
 
     # Get similar sequences
     # Exact matches
@@ -180,5 +210,21 @@ no_subtype 7
 # Sequences to analyse: 3945
 # Different sequences: 3819
 # Sequences contained: 1
+# Unique sequences (excluding contained sequences): 3818
+'''
+
+
+'''
+gap 3818
+no_subtype 0
+iupac_code 0
+impossible_iupac_code 0
+with_underscore 0
+normal 3818
+WARNING: sequences with different lengths in the following serotypes:
+Counter({'2': 27, '1': 12, '4': 8, '3': 4})
+# Sequences to analyse: 3818
+# Different sequences: 3818
+# Sequences contained: 0
 # Unique sequences (excluding contained sequences): 3818
 '''
