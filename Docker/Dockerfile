@@ -19,14 +19,14 @@ ENV PATH="/NGStools/ncbi-blast-2.8.1+/bin:${PATH}"
 # --- ReMatCh ---
 RUN git clone https://github.com/B-UMMI/ReMatCh.git && \
     cd ReMatCh && \
-    git checkout bowtie_algo && \
+    # git checkout bowtie_algo && \
     python3 setup.py install && \
     cd /NGStools
 
 # -- seq_typing --
 RUN git clone https://github.com/B-UMMI/seq_typing.git && \
     cd seq_typing && \
-    git checkout bowtie_index && \
+    # git checkout bowtie_index && \
     python3 setup.py install
 
 # -- Clean --
