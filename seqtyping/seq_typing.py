@@ -7,9 +7,9 @@ seq_typing.py - Determine which reference sequence is more likely to be present
 in a given sample
 <https://github.com/B-UMMI/seq_typing/>
 
-Copyright (C) 2018 Miguel Machado <mpmachado@medicina.ulisboa.pt>
+Copyright (C) 2019 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: October 15, 2018
+Last modified: January 10, 2019
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ import os
 import time
 import sys
 from pkg_resources import resource_filename
+from shutil import copyfile as shutil_copyfile
 
 try:
     from __init__ import __version__
@@ -338,6 +339,69 @@ def blast_subcommand(args):
         sys.exit('\n'.join(error_msg))
 
 
+def check_reference_exist(reference):
+    """
+    Check if a reference file exists, both the fasta file and the Bowtie2 index
+
+    Parameters
+    ----------
+    reference : str
+        Path to the reference sequences file
+
+    Returns
+    -------
+    fasta_file : bool
+        If the fasta file exists returns True, else False
+    index_files : list
+        List with Bowtie2 index files found
+    pickle_file : bool
+        If the pickle file for the fasta file exists returns True, else False
+    """
+
+    things_found = os.listdir(os.path.dirname(reference))
+
+    basename_reference = os.path.basename(reference)
+
+    fasta_file = False
+    index_files = []
+    pickle_file = False
+    for thing in things_found:
+        if thing.startswith(basename_reference):
+            file_path = os.path.join(os.path.dirname(reference), thing)
+            file_link_exists = os.path.isfile(file_path) or os.path.islink(file_path)
+            if thing == basename_reference and file_link_exists:
+                fasta_file = True
+            elif thing.endswith('.bt2') and file_link_exists:
+                index_files.append(file_path)
+            elif thing.endswith('.pkl') and file_link_exists:
+                pickle_file = True
+
+    return fasta_file, index_files, pickle_file
+
+
+def write_seq_from_sequence_dict(sequence_dict, out_fasta_file):
+    """
+    Write a fasta file with sequences found in sequence_dict dictionary
+
+    Parameters
+    ----------
+    sequence_dict : dict
+        Dictionary as follow
+        sequence_dict[counter] = {'header': without_greater_sign, 'sequence': seq, 'length': seq_length_int}
+    out_fasta_file : str
+        Path to output fasta file
+
+    Returns
+    -------
+
+    """
+    with open(out_fasta_file, 'wt', newline='\n') as writer:
+        for _, seq_info in sequence_dict.items():
+            writer.write('>{header}\n'
+                         '{seq}\n'.format(header=seq_info['header'],
+                                          seq='\n'.join(utils.chunkstring(seq_info['sequence'], 80))))
+
+
 def reads_subcommand(args):
     msg = []
     # if args.reference is None and args.org is None:
@@ -352,14 +416,125 @@ def reads_subcommand(args):
 
     rematch_script = include_rematch_dependencies_path()
 
-    utils.required_programs({'rematch.py': ['--version', '>=', '4.0']})
+    utils.required_programs({'rematch.py': ['--version', '>=', '4.0.1']})
 
     args.fastq = [os.path.abspath(fastq.name) for fastq in args.fastq]
 
+    folders_2_remove = []
+
+    references_dir = os.path.join(args.outdir, 'references', '')
+    if not os.path.isdir(references_dir):
+        os.makedirs(references_dir)
+    folders_2_remove.append(references_dir)
+
+    references_headers = {}
+
+    clean_run_rematch = True
+
     if args.reference is not None:
-        args.reference = [reference.name for reference in args.reference]
+
+        clean_run_rematch = False
+
+        args.reference = [os.path.abspath(reference) for reference in args.reference]
+
+        reference_files = {}
+
+        for reference in args.reference:
+            fasta_file, index_files, pickle_file = check_reference_exist(reference)
+            if not fasta_file and len(index_files) == 0 and not pickle_file:
+                sys.exit('Missing reference fasta file, Bowtie2 index of pickle file for {}'.format(reference))
+            reference_files[reference] = fasta_file, index_files, pickle_file
+
+        references_to_use = []
+
+        for reference in args.reference:
+
+            reference_files_found = reference_files[reference]
+
+            reference_file = reference
+
+            # Create symlink to pickle file
+            if reference_files_found[2]:
+                symlink = os.path.join(references_dir, os.path.basename(reference_file + '.pkl'))
+                if os.path.islink(symlink):
+                    os.unlink(symlink)
+                os.symlink(reference_file + '.pkl', symlink)
+                header_gene_list, _ = utils.extractVariableFromPickle(reference_file + '.pkl')
+            else:
+                new_reference_file, header_gene_list, seq_reference_dict = \
+                    run_rematch.clean_headers_reference_file(reference_file=reference_file, outdir=references_dir)
+                if new_reference_file != reference_file:
+                    utils.Bcolors_print('WARNING: Sequences headers were renamed for {}'.format(reference), 'WARNING')
+                    reference_file = new_reference_file
+
+                pickle_file = os.path.join(references_dir, os.path.basename(reference_file) + '.pkl')
+                utils.saveVariableToPickle((header_gene_list, seq_reference_dict), pickle_file)
+
+            if reference_file == reference:
+
+                # Create symlinks to reference file
+                if reference_files_found[0]:
+                    symlink = os.path.join(references_dir, os.path.basename(reference_file))
+                    if os.path.islink(symlink):
+                        os.unlink(symlink)
+                    os.symlink(reference_file, symlink)
+                    reference_file = symlink
+                else:
+                    # Create reference file if does not exist
+
+                    # From index files
+                    if len(reference_files_found[1]) > 0:
+                        run_successfully, reference_file = \
+                            run_rematch.run_bowtie_inspect(index_without_sufix=reference_file, outdir=references_dir)
+                        if not run_successfully:
+                            sys.exit('Something went wrong while creating the reference fasta file from Bowtie2'
+                                     ' index {}'.format(reference_file))
+
+                    # From pickle file
+                    elif reference_files_found[2]:
+                        _, seq_reference_dict = utils.extractVariableFromPickle(reference_file + '.pkl')
+                        reference_file = os.path.join(references_dir, os.path.basename(reference_file))
+                        write_seq_from_sequence_dict(seq_reference_dict, reference_file)
+
+                # Create symlinks to index files
+                if len(reference_files_found[1]) > 0:
+                    for index_file in reference_files_found[1]:
+                        symlink = os.path.join(references_dir, os.path.basename(index_file))
+                        if os.path.islink(symlink):
+                            os.unlink(symlink)
+                        os.symlink(index_file, symlink)
+
+            references_to_use.append(reference_file)
+            references_headers[reference_file] = dict(header_gene_list)
+
+        args.reference = references_to_use
     else:
         args.reference, config = get_fasta_config(args.org)
+
+        references_to_use = []
+
+        for reference in args.reference:
+            new_reference_file, header_gene_list, seq_reference_dict = \
+                run_rematch.clean_headers_reference_file(reference_file=reference, outdir=references_dir)
+
+            if new_reference_file != reference:
+                utils.Bcolors_print('WARNING: Sequences headers were renamed for {}'.format(reference), 'WARNING')
+                references_to_use.append(new_reference_file)
+                references_headers[new_reference_file] = dict(header_gene_list)
+                pickle_file = os.path.join(references_dir, os.path.basename(new_reference_file) + '.pkl')
+            else:
+                symlink = os.path.join(references_dir, os.path.basename(reference))
+                if os.path.islink(symlink):
+                    os.unlink(symlink)
+                os.symlink(reference, symlink)
+                references_to_use.append(symlink)
+                references_headers[symlink] = dict(header_gene_list)
+                pickle_file = os.path.join(references_dir, os.path.basename(symlink) + '.pkl')
+
+            utils.saveVariableToPickle((header_gene_list, seq_reference_dict), pickle_file)
+
+        args.reference = references_to_use
+
         config = parse_config(config)
         args.extraSeq = config['length_extra_seq']
         args.minCovPresence = config['minimum_depth_presence']
@@ -379,15 +554,6 @@ def reads_subcommand(args):
                           minCovCall=args.minCovCall, minGeneCoverage=args.minGeneCoverage,
                           typeSeparator=args.typeSeparator))
 
-    folders_2_remove = []
-
-    # Prepare references
-    references_dir = os.path.join(args.outdir, 'references', '')
-    if not os.path.isdir(references_dir):
-        os.makedirs(references_dir)
-    folders_2_remove.append(references_dir)
-    references_files, references_headers = prepare_references(args.reference, args.mapRefTogether, references_dir)
-
     pickles_folder = os.path.join(args.outdir, 'pickles', '')
 
     # Run ReMatCh
@@ -397,16 +563,58 @@ def reads_subcommand(args):
         references_results, module_dir = utils.extractVariableFromPickle(pickle_file)
         folders_2_remove.append(module_dir)
     else:
-        _, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, references_files,
+        _, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, args.reference,
                                                                     args.fastq, args.threads, args.extraSeq,
                                                                     args.minCovPresence, args.minCovCall,
                                                                     args.minFrequencyDominantAllele,
                                                                     args.minGeneCoverage, args.minGeneIdentity,
-                                                                    args.debug, args.doNotRemoveConsensus)
+                                                                    args.debug, args.doNotRemoveConsensus,
+                                                                    args.bowtieAlgo,
+                                                                    clean_run_rematch=clean_run_rematch)
         folders_2_remove.append(module_dir)
         utils.saveVariableToPickle([references_results, module_dir], pickle_file)
 
     return folders_2_remove, references_results, args.reference, references_headers
+
+
+def index_subcommand(args):
+    _ = include_rematch_dependencies_path()
+
+    utils.required_programs({'bowtie2-build': ['--version', '>=', '2.2.9']})
+
+    if args.reference is not None:
+        args.reference = [os.path.abspath(reference.name) for reference in args.reference]
+    else:
+        args.reference, _ = get_fasta_config(args.org)
+        print('\n'
+              'Settings that will be used:\n'
+              '    reference: {reference}\n'
+              '\n'.format(reference=args.reference))
+
+    for reference in args.reference:
+        reference_file_outdir = os.path.join(args.outdir, os.path.basename(reference))
+
+        new_reference_file, header_gene_list, seq_reference_dict = \
+            run_rematch.clean_headers_reference_file(reference_file=reference, outdir=args.outdir)
+
+        if new_reference_file == reference:
+            # Copy fasta file to outdir
+            shutil_copyfile(reference, reference_file_outdir, follow_symlinks=True)
+        else:
+            utils.Bcolors_print('WARNING: Sequences headers were renamed for {}'.format(reference), 'WARNING')
+            # Rename files
+            os.rename(new_reference_file, reference_file_outdir)
+
+        pickle_file = os.path.join(args.outdir, reference_file_outdir + '.pkl')
+        utils.saveVariableToPickle((header_gene_list, seq_reference_dict), pickle_file)
+
+        # Create Bowtie2 index
+        run_successfully = run_rematch.run_bowtie_build(reference_file=reference_file_outdir, outdir=args.outdir,
+                                                        threads=args.threads)
+        if not run_successfully:
+            sys.exit('Something went wrong while creating Bowtie2 index for {}'.format(reference))
+
+    exit(0)
 
 
 def python_arguments(program_name, version):
@@ -427,6 +635,9 @@ def python_arguments(program_name, version):
     parser_reads : argparse.ArgumentParser.add_subparsers.add_parser
         Reads subparser
         For running the program using fastq files
+    parser_index : argparse.ArgumentParser.add_subparsers.add_parser
+        Index subparser
+        For creating Bowtie2 index
     parser_assembly : argparse.ArgumentParser.add_subparsers.add_parser
         Assembly subparser
         For running the program using a fasta file
@@ -443,16 +654,24 @@ def python_arguments(program_name, version):
 
     subparsers = parser.add_subparsers(title='Subcommands', description='Valid subcommands', help='Additional help')
 
-    parser_reads = subparsers.add_parser('reads', description='Run {} using fastq files.'.format(parser.prog),
-                                         help='reads --help')
+    parser_reads = subparsers.add_parser('reads', description='Run {prog} using fastq files. If running multiple'
+                                                              ' samples using the same reference sequences file,'
+                                                              ' consider use first "{prog} index"'
+                                                              ' subcommand.'.format(prog=parser.prog),
+                                         help='reads --help', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser_index = subparsers.add_parser('index', description='Creates Bowtie2 index. This is useful when running the'
+                                                              ' same reference sequences file for different reads'
+                                                              ' dataset.',
+                                         help='index --help', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser_assembly = subparsers.add_parser('assembly', description='Run {prog} using a fasta file. If running'
                                                                     ' multiple samples using the same DB sequence file,'
                                                                     ' consider use first "{prog} blast"'
                                                                     ' subcommand.'.format(prog=parser.prog),
-                                            help='assembly --help')
+                                            help='assembly --help',
+                                            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser_blast = subparsers.add_parser('blast', description='Creates Blast DB. This is useful when running the same'
-                                                              ' DB sequence file for different samples.',
-                                         help='blast --help')
+                                                              ' DB sequence file for different assemblies.',
+                                         help='blast --help', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser_reads_required = parser_reads.add_argument_group('Required options')
     parser_reads_required.add_argument('-f', '--fastq', nargs='+', action=utils.required_length((1, 2), '--fastq'),
@@ -462,11 +681,16 @@ def python_arguments(program_name, version):
                                        required=True)
 
     parser_reads_reference = parser_reads.add_mutually_exclusive_group(required=True)
-    parser_reads_reference.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'),
-                                        metavar='/path/to/reference_sequence.fasta',
-                                        help='Fasta file containing reference sequences. If more than one file is'
-                                             ' passed, a type for each file will be determined. Give the files name in'
-                                             ' the same order that the type must be determined.')
+    parser_reads_reference.add_argument('-r', '--reference', nargs='+', type=str,
+                                        metavar='/path/to/reference/sequences.file',
+                                        help='Path to reference sequences file. If Bowtie2 index was already produced,'
+                                             ' only provide the file name that ends with ".1.bt2", but without this'
+                                             ' termination (for example, for a Bowtie2 index'
+                                             ' "/file/sequences.fasta.1.bt2", only provide "/file/sequences.fasta").'
+                                             ' If no Bowtie2 index files are found, those will be created in --outdir.'
+                                             ' If more than one file is passed, a type for each file will be'
+                                             ' determined. Give the files name in the same order that the type must be'
+                                             ' determined.')
     parser_reads_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Name of the organism with reference sequences provided together'
                                              ' with {} for typing ("seqtyping/reference_sequences/"'
@@ -481,7 +705,9 @@ def python_arguments(program_name, version):
     parser_reads_optional_general.add_argument('-j', '--threads', type=int, metavar='N',
                                                help='Number of threads to use (default: 1)', required=False, default=1)
     parser_reads_optional_general.add_argument('--mapRefTogether', action='store_true',
-                                               help='Map the reads against all references together')
+                                               help=argparse.SUPPRESS)
+    # parser_reads_optional_general.add_argument('--mapRefTogether', action='store_true',
+    #                                            help='Map the reads against all references together')
     parser_reads_optional_general.add_argument('--typeSeparator', type=str, metavar='_',
                                                help='Last single character separating the general sequence header from'
                                                     ' the last part containing the type (default: _)',
@@ -522,6 +748,16 @@ def python_arguments(program_name, version):
                                                     ' consider a gene to be present (value between [0, 100]). One INDEL'
                                                     ' will be considered as one difference (default: 80)',
                                                required=False, default=80)
+    parser_reads_optional_general.add_argument('--bowtieAlgo', type=str, metavar='"--very-sensitive-local"',
+                                               help='Bowtie2 alignment mode. It can be an end-to-end alignment'
+                                                    ' (unclipped alignment) or local alignment (soft clipped'
+                                                    ' alignment). Also, can choose between fast or sensitive'
+                                                    ' alignments. Please check Bowtie2 manual for extra information:'
+                                                    ' http://bowtie-bio.sourceforge.net/bowtie2/index.shtml .'
+                                                    ' This option should be provided between quotes and starting with'
+                                                    ' an empty space (like --bowtieAlgo " --very-fast") or using equal'
+                                                    ' sign (like --bowtieAlgo="--very-fast")',
+                                               required=False, default='--very-sensitive-local')
     parser_reads_optional_general.add_argument('--doNotRemoveConsensus', action='store_true',
                                                help='Do not remove ReMatCh consensus sequences')
     parser_reads_optional_general.add_argument('--debug', action='store_true',
@@ -530,6 +766,25 @@ def python_arguments(program_name, version):
                                                help='Resume %(prog)s')
     parser_reads_optional_general.add_argument('--notClean', action='store_true',
                                                help='Do not remove intermediate files')
+
+    parser_index_reference = parser_index.add_mutually_exclusive_group(required=True)
+    parser_index_reference.add_argument('-r', '--reference', nargs='+', type=str,
+                                        metavar='/path/to/reference/sequences.fasta',
+                                        help='Path to reference sequences file. If more than one file is passed, a'
+                                             ' Bowtie2 index for each file will be created.')
+    parser_index_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
+                                        help='Name of the organism with reference sequences provided'
+                                             ' ("seqtyping/reference_sequences/" folder) together'
+                                             ' with seq_typing.py for typing',
+                                        action=utils.arguments_choices_words(get_species_allowed(), '--org'))
+
+    parser_index_optional_general = parser_index.add_argument_group('General facultative options')
+    parser_index_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
+                                               help='Path to the directory where the information will be stored'
+                                                    ' (default: ./)',
+                                               required=False, default='.')
+    parser_index_optional_general.add_argument('-j', '--threads', type=int, metavar='N', required=False,
+                                               help='Number of threads to use (default: 1)', default=1)
 
     parser_assembly_required = parser_assembly.add_argument_group('Required options')
     parser_assembly_required.add_argument('-f', '--fasta', nargs=1, type=argparse.FileType('r'),
@@ -541,7 +796,7 @@ def python_arguments(program_name, version):
     parser_assembly_reference = parser_assembly.add_mutually_exclusive_group(required=True)
     parser_assembly_reference.add_argument('-b', '--blast', nargs='+', type=argparse.FileType('r'),
                                            metavar='/path/to/Blast/db.sequences.file',
-                                           help='Path to DB sequence file. If Blast DB was already produced only'
+                                           help='Path to DB sequence file. If Blast DB was already produced, only'
                                                 ' provide the file that do not end with ".n*" something (do not use for'
                                                 ' example /blast_db.sequences.fasta.nhr). If no Blast DB is found for'
                                                 ' the DB sequence file, one will be created in --outdir. If more than'
@@ -606,10 +861,11 @@ def python_arguments(program_name, version):
                                                required=False, default='.')
 
     parser_reads.set_defaults(func=reads_subcommand)
+    parser_index.set_defaults(func=index_subcommand)
     parser_assembly.set_defaults(func=assembly_subcommand)
     parser_blast.set_defaults(func=blast_subcommand)
 
-    return parser, parser_reads, parser_assembly, parser_blast
+    return parser, parser_reads, parser_index, parser_assembly, parser_blast
 
 
 def main():
@@ -618,7 +874,7 @@ def main():
     if sys.version_info[0] < 3:
         sys.exit('Must be using Python 3. Try calling "python3 {}"'.format(program_name))
 
-    parser, _, _, _ = python_arguments(program_name, __version__)
+    parser, _, _, _, _ = python_arguments(program_name, __version__)
     args = parser.parse_args()
 
     start_time = time.time()

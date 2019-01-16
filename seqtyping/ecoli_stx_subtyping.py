@@ -6,9 +6,9 @@
 ecoli_stx_subtyping.py - Gets E. coli stx subtypes
 <https://github.com/B-UMMI/seq_typing/modules/>
 
-Copyright (C) 2018 Miguel Machado <mpmachado@medicina.ulisboa.pt>
+Copyright (C) 2019 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: September 24, 2018
+Last modified: January 10, 2019
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -105,8 +105,7 @@ def main():
     if sys.version_info[0] < 3:
         sys.exit('Must be using Python 3. Try calling "python3 {}"'.format(program_name))
 
-    parser, parser_reads, parser_assembly, parser_blast = python_arguments(program_name=program_name,
-                                                                           version=version)
+    parser, parser_reads, _, parser_assembly, _ = python_arguments(program_name=program_name, version=version)
     parser.description = 'Gets E. coli stx subtypes'
 
     # Add specific arguments

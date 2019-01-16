@@ -11,10 +11,10 @@ This is a Dockerfile to produce a **seq_typing** image, with all dependencies al
 Within this image you can find:
 - ubuntu:16.04
 - git v2.7.4
-- Python v3.5.2
-- [Blast+](https://blast.ncbi.nlm.nih.gov/Blast.cgi) v2.7.1
-- [ReMatCh](https://github.com/B-UMMI/ReMatCh) v4.0
-- [seq_typing](https://github.com/B-UMMI/seq_typing) v2.1.2
+- Python v2.7.12 and v3.5.2
+- [Blast+](https://blast.ncbi.nlm.nih.gov/Blast.cgi) v2.8.1
+- [ReMatCh](https://github.com/B-UMMI/ReMatCh) v4.0.1
+- [seq_typing](https://github.com/B-UMMI/seq_typing) v2.2
 
 
 ### Using play-with-docker
@@ -24,7 +24,7 @@ Within [play-with-docker](http://labs.play-with-docker.com/) webpage click on **
 will open with a big counter on the upper left corner. Click on **+ add new instance** and a terminal like instance should be generated on the right. On
 this terminal you can load this docker image as follows:
 
-`docker pull ummidock/seq_typing:2.1.2-02`
+`docker pull ummidock/seq_typing:2.2-01`
 
 #### Build this docker on your local machine
 
@@ -32,17 +32,17 @@ For this, docker needs to be installed on your machine. Instructions for this ca
 
 ##### Using DockerHub (automated build image)
 
-`docker pull ummidock/seq_typing:2.1.2-02`
+`docker pull ummidock/seq_typing:2.2-01`
 
 ##### Using GitHub (build docker image)
 
 1) `git clone https://github.com/B-UMMI/seq_typing.git`  
-2) `docker build -t ummidock/seq_typing:2.1.2-02 ./seq_typing/Docker/`
+2) `docker build -t ummidock/seq_typing:2.2-01 ./seq_typing/Docker/`
 
 ### Run (using automated build image)
 Example of _Haemophilus influenzae_ serotyping using reads and provided references sequences (adapted from [here](../README.md#reads)).
 ````bash
-docker run --rm -u $(id -u):$(id -g) -it -v /local/folder/fastq_data:/data/ ummidock/seq_typing:2.1.2-02 \
+docker run --rm -u $(id -u):$(id -g) -it -v /local/folder/fastq_data:/data/ ummidock/seq_typing:2.2-01 \
     seq_typing.py reads --org Haemophilus influenzae \
                         --fastq /data/sample_1.fq.gz /data/sample_2.fq.gz \
                         --outdir /data/sample_out/ \
@@ -57,13 +57,13 @@ For more examples on how to run **seq_typing** without a Docker container see ge
 
 ```bash
 # Get Docker image
-udocker pull ummidock/seq_typing:2.1.2-02
+udocker pull ummidock/seq_typing:2.2-01
 
 # Create container (only needed to be done once)
-udocker create --name=seq_typing_2-1-2_02 ummidock/seq_typing:2.1.2-02
+udocker create --name=seq_typing_2-2_01 ummidock/seq_typing:2.2-01
 
-# Run INNUca
-udocker run --user $(id -u):$(id -g) -v /local/folder/fastq_data:/data/ seq_typing_2-1-2_02 \
+# Run seq_typing
+udocker run --user $(id -u):$(id -g) -v /local/folder/fastq_data:/data/ seq_typing_2-2_01 \
     seq_typing.py reads --org Haemophilus influenzae \
                         --fastq /data/sample_1.fq.gz /data/sample_2.fq.gz \
                         --outdir /data/sample_out/ \

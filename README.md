@@ -12,6 +12,7 @@ Determines which reference sequence is more likely to be present in a given samp
 * [Usage](#usage)
   * [General use](#general-use)
     * [General info](#general-info)
+      * [_index_ module](#index-module)
       * [_reads_ module](#reads-module)
       * [_blast_ module](#blast-module)
       * [_assembly_ module](#assembly-module)
@@ -131,7 +132,7 @@ If you don't have permission for global system installation, try the following _
 </html>
 
 ```
-usage: seq_typing.py [-h] [--version] {reads,assembly,blast} ...
+usage: seq_typing.py [-h] [--version] {reads,index,assembly,blast} ...
 
 Determines which reference sequence is more likely to be present in a given
 sample
@@ -143,18 +144,58 @@ optional arguments:
 Subcommands:
   Valid subcommands
 
-  {reads,assembly,blast}
+  {reads,index,assembly,blast}
                         Additional help
     reads               reads --help
+    index               index --help
     assembly            assembly --help
     blast               blast --help
 ```
+* [_index_ module](#index-module):  
+  Creates Bowtie2 index. This is useful when running the same reference sequences file for different reads dataset.
 * [_reads_ module](#reads-module):  
-  Run seq_typing.py using fastq files.
+  Run seq_typing.py using fastq files. If running multiple samples using the same reference sequences file, consider use first _seq_typing.py index_ module.
 * [_blast_ module](#blast-module):  
-  Creates Blast DB. This is useful when running the same DB sequence file for different samples.
+  Creates Blast DB. This is useful when running the same DB sequence file for different assemblies.
 * [_assembly_ module](#assembly-module):  
   Run seq_typing.py using a fasta file. If running multiple samples using the same DB sequence file, consider use first _seq_typing.py blast_ module.
+
+##### _index_ module  
+<html>
+ <div align="right">
+  <a href="#seq_typing">Back to top</a><br>
+ </div>
+</html>
+
+Creates Bowtie2 index.  
+This is useful when running the same reference sequences file for different reads dataset.
+```
+usage: seq_typing.py index [-h]
+                           -r /path/to/reference.fasta ... | --org escherichia coli
+                           [-o /path/to/output/directory/] [-j N]
+
+Creates Bowtie2 index. This is useful when running the same reference
+sequences file for different reads dataset.
+
+optional arguments:
+  -h, --help            show this help message and exit
+
+Required one of the following options:
+  -r --reference /path/to/reference.fasta  ...
+                        Path to reference sequences file. If more than one
+                        file is passed, a Bowtie2 index for each file will be
+                        created. (default: None)
+  --org escherichia coli
+                        Name of the organism with reference sequences provided
+                        ("seqtyping/reference_sequences/" folder) together
+                        with seq_typing.py for typing (default: None)
+
+General facultative options:
+  -o --outdir /path/to/output/directory/
+                        Path to the directory where the information will be
+                        stored (default: ./) (default: .)
+  -j N, --threads N     Number of threads to use (default: 1) (default: 1)
+```
 
 ##### _reads_ module  
 <html>
@@ -169,14 +210,17 @@ usage: seq_typing.py reads [-h]
                            -f /path/to/input/file.fq.gz ...
                            -r /path/to/reference_sequence.fasta ... | --org escherichia coli
                            [-o /path/to/output/directory/] [-j N]
-                           [--mapRefTogether] [--typeSeparator _]
+                           [--typeSeparator _]
                            [--extraSeq N] [--minCovPresence N]
                            [--minCovCall N] [--minGeneCoverage N]
                            [--minDepthCoverage N] [--minGeneIdentity N]
+                           [--bowtieAlgo="--very-sensitive-local"]
                            [--doNotRemoveConsensus] [--debug] [--resume]
                            [--notClean]
 
-Run seq_typing.py using fastq files
+Run seq_typing.py using fastq files. If running multiple samples using the
+same reference sequences file, consider use first "seq_typing.py index"
+module.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -189,10 +233,16 @@ Required options:
 
 Required one of the following options:
   -r --reference /path/to/reference_sequence.fasta ...
-                        Fasta file containing reference sequences. If more
+                        Path to reference sequences file. If Bowtie2 index was
+                        already produced, only provide the file name that ends
+                        with ".1.bt2", but without this termination (for
+                        example, for a Bowtie2 index
+                        "/file/sequences.fasta.1.bt2", only provide
+                        "/file/sequences.fasta"). If no Bowtie2 index files
+                        are found, those will be created in --outdir. If more
                         than one file is passed, a type for each file will be
                         determined. Give the files name in the same order that
-                        the type must be determined.
+                        the type must be determined. (default: None)
   --org escherichia coli
                         Name of the organism with reference sequences provided
                         together with seq_typing.py for typing
@@ -203,7 +253,6 @@ General facultative options:
                         Path to the directory where the information will be
                         stored (default: ./)
   -j --threads N        Number of threads to use (default: 1)
-  --mapRefTogether      Map the reads against all references together
   --typeSeparator _     Last single character separating the general sequence
                         header from the last part containing the type (default: _)
   --extraSeq N          Sequence length added to both ends of target sequences
@@ -222,6 +271,18 @@ General facultative options:
                         covered to consider a gene to be present (value
                         between [0, 100]). One INDEL will be considered as one
                         difference (default: 80)
+  --bowtieAlgo="--very-sensitive-local"
+                        Bowtie2 alignment mode. It can be an end-to-end
+                        alignment (unclipped alignment) or local alignment
+                        (soft clipped alignment). Also, can choose between
+                        fast or sensitive alignments. Please check Bowtie2
+                        manual for extra information:
+                        http://bowtie-bio.sourceforge.net/bowtie2/index.shtml .
+                        This option should be provided between quotes and
+                        starting with an empty space
+                        (like --bowtieAlgo " --very-fast") or using equal
+                        sign (like --bowtieAlgo="--very-fast")
+                        (default: "--very-sensitive-local")
   --doNotRemoveConsensus
                         Do not remove ReMatCh consensus sequences
   --debug               Debug mode: do not remove temporary files
@@ -236,7 +297,7 @@ General facultative options:
 </html>
 
 Creates Blast DB.  
-This is useful when running the same DB sequence file for different samples.
+This is useful when running the same DB sequence file for different assemblies.
 ```
 usage: seq_typing.py blast [-h]
                            -t nucl
@@ -244,7 +305,7 @@ usage: seq_typing.py blast [-h]
                            [-o /path/to/output/directory/]
 
 Creates Blast DB. This is useful when running the same DB sequence file for
-different samples.
+different assemblies.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -299,7 +360,7 @@ Required options:
 Required one of the following options:
   -b --blast /path/to/Blast/db.sequences.file ...
                         Path to DB sequence file. If Blast DB was already
-                        produced only provide the file that do not end with
+                        produced, only provide the file that do not end with
                         ".n*" something (do not use for example
                         /blast_db.sequences.fasta.nhr). If no Blast DB is
                         found for the DB sequence file, one will be created in
@@ -367,8 +428,7 @@ Serotyping _Escherichia coli_ using provided references sequences (that uses two
 seq_typing.py reads --org Escherichia coli \
                     --fastq sample_1.fq.gz sample_2.fq.gz \
                     --outdir sample_out/ \
-                    --threads 2 \
-                    --mapRefTogether
+                    --threads 2
 ```
 
 Type one sample with a users own set of references sequences (using for example single-end reads):
@@ -376,8 +436,45 @@ Type one sample with a users own set of references sequences (using for example 
 seq_typing.py reads --reference references/Ecoli/O_type.fasta references/Ecoli/H_type.fasta \
                     --fastq sample.fq.gz \
                     --outdir sample_out/ \
-                    --threads 2 \
-                    --mapRefTogether
+                    --threads 2
+```
+
+When running the same reference sequences files for different reads dataset, the Bowtie2 index files can be produced before to speed up the analysis.  
+Example using _Dengue virus_ provided reference sequences (that uses only one reference sequences file):
+```bash
+seq_typing.py index --org Dengue virus \
+                    --outdir index_out/ \
+                    --threads 2
+
+# Run seq_typing using created database
+seq_typing.py reads --reference index_out/1_GenotypesDENV_14-05-18.fasta \
+                    --fastq sample_1.fq.gz sample_2.fq.gz \
+                    --outdir sample_out/ \
+                    --threads 2
+```
+
+The following examples show how to use users own reference sequences files. If many samples will be analysed using the same reference sequences file, a preliminary _seq_typing.py index_ step is advisable to be run.  
+
+Run **seq_typing** without previous construction of reference database:
+```bash
+seq_typing.py reads --reference references/O_type.fasta references/H_type.fasta \
+                    --fastq sample_1.fq.gz sample_2.fq.gz \
+                    --outdir sample_out/ \
+                    --threads 2
+```
+
+Run **seq_typing** with a preliminary step for Bowtie2 index production (useful when running multiple samples with the same reference sequences file):
+```bash
+# Preliminary step for Bowtie2 index construction.
+seq_typing.py index --reference references/O_type.fasta references/H_type.fasta \
+                    --outdir index_out/ \
+                    --threads 2
+
+# Run seq_typing using created database
+seq_typing.py reads --reference index_out/O_type.fasta index_out/H_type.fasta \
+                    --fastq sample_1.fq.gz sample_2.fq.gz \
+                    --outdir sample_out/ \
+                    --threads 2
 ```
 
 ##### Assemblies
@@ -478,7 +575,7 @@ usage: ecoli_stx_subtyping.py reads [-h]
                                     -r /path/to/reference_sequence.fasta ... | --org stx subtyping
                                     [--stx2covered N] [--stx2identity N]
                                     [-o /path/to/output/directory/] [-j N]
-                                    [--mapRefTogether] [--typeSeparator _]
+                                    [--typeSeparator _]
                                     [--extraSeq N] [--minCovPresence N]
                                     [--minCovCall N] [--minGeneCoverage N]
                                     [--minDepthCoverage N] [--minGeneIdentity N]
@@ -514,7 +611,6 @@ General facultative options:
                         Path to the directory where the information will be
                         stored (default: ./)
   -j --threads N        Number of threads to use (default: 1)
-  --mapRefTogether      Map the reads against all references together
   --typeSeparator _     Last single character separating the general sequence
                         header from the last part containing the type (default: _)
   --extraSeq N          Sequence length added to both ends of target sequences
@@ -533,6 +629,18 @@ General facultative options:
                         covered to consider a gene to be present (value
                         between [0, 100]). One INDEL will be considered as one
                         difference (default: 80)
+  --bowtieAlgo="--very-sensitive-local"
+                        Bowtie2 alignment mode. It can be an end-to-end
+                        alignment (unclipped alignment) or local alignment
+                        (soft clipped alignment). Also, can choose between
+                        fast or sensitive alignments. Please check Bowtie2
+                        manual for extra information:
+                        http://bowtie-bio.sourceforge.net/bowtie2/index.shtml .
+                        This option should be provided between quotes and
+                        starting with an empty space
+                        (like --bowtieAlgo " --very-fast") or using equal
+                        sign (like --bowtieAlgo="--very-fast")
+                        (default: "--very-sensitive-local")
   --doNotRemoveConsensus
                         Do not remove ReMatCh consensus sequences
   --debug               Debug mode: do not remove temporary files
