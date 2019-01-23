@@ -186,7 +186,7 @@ Required one of the following options:
                         file is passed, a Bowtie2 index for each file will be
                         created. (default: None)
   --org escherichia coli
-                        Name of the organism with reference sequences provided
+                        Organism option with reference sequences provided
                         ("seqtyping/reference_sequences/" folder) together
                         with seq_typing.py for typing (default: None)
 
@@ -244,7 +244,7 @@ Required one of the following options:
                         determined. Give the files name in the same order that
                         the type must be determined. (default: None)
   --org escherichia coli
-                        Name of the organism with reference sequences provided
+                        Organism option with reference sequences provided
                         together with seq_typing.py for typing
                         ("seqtyping/reference_sequences/" folder)
 
@@ -257,14 +257,16 @@ General facultative options:
                         header from the last part containing the type (default: _)
   --extraSeq N          Sequence length added to both ends of target sequences
                         (usefull to improve reads mapping to the target one)
-                        that will be trimmed in ReMatCh outputs (default: 0)
+                        that will be trimmed in ReMatCh outputs
+                        (default when not using --org: 0)
   --minCovPresence N    Reference position minimum coverage depth to consider
-                        the position to be present in the sample (default: 5)
+                        the position to be present in the sample
+                        (default when not using --org: 5)
   --minCovCall N        Reference position minimum coverage depth to perform a
-                        base call (default: 10)
+                        base call (default when not using --org: 10)
   --minGeneCoverage N   Minimum percentage of target reference sequence
                         covered to consider a sequence to be present (value
-                        between [0, 100]) (default: 60)
+                        between [0, 100]) (default when not using --org: 60)
   --minDepthCoverage N  Minimum depth of coverage of target reference sequence
                         to consider a sequence to be present (default: 2)
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
@@ -315,7 +317,7 @@ Required one of the following options:
                         Path to DB sequence file. If more than one file is
                         passed, a Blast DB for each file will be created.
   --org escherichia coli
-                        Name of the organism with DB sequence file provided
+                        Organism option with DB sequence file provided
                         ("seqtyping/reference_sequences/" folder) together with
                         seq_typing.py for typing
 
@@ -368,7 +370,7 @@ Required one of the following options:
                         type for each file will be determined. Give the files
                         in the same order that the type must be determined.
   --org escherichia coli
-                        Name of the organism with DB sequence file provided
+                        Organism option with DB sequence file provided
                         ("seqtyping/reference_sequences/" folder) together with
                         seq_typing.py for typing
 

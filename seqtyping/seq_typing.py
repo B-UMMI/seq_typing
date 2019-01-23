@@ -692,7 +692,7 @@ def python_arguments(program_name, version):
                                              ' determined. Give the files name in the same order that the type must be'
                                              ' determined.')
     parser_reads_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                        help='Name of the organism with reference sequences provided together'
+                                        help='Organism option with reference sequences provided together'
                                              ' with {} for typing ("seqtyping/reference_sequences/"'
                                              ' folder)'.format(parser.prog),
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
@@ -773,7 +773,7 @@ def python_arguments(program_name, version):
                                         help='Path to reference sequences file. If more than one file is passed, a'
                                              ' Bowtie2 index for each file will be created.')
     parser_index_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                        help='Name of the organism with reference sequences provided'
+                                        help='Organism option with reference sequences provided'
                                              ' ("seqtyping/reference_sequences/" folder) together'
                                              ' with seq_typing.py for typing',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
@@ -803,7 +803,7 @@ def python_arguments(program_name, version):
                                                 ' one Blast DB file is passed, a type for each file will be determined.'
                                                 ' Give the files in the same order that the type must be determined.')
     parser_assembly_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                           help='Name of the organism with DB sequence file provided'
+                                           help='Organism option with DB sequence file provided'
                                                 ' ("seqtyping/reference_sequences/" folder) together'
                                                 ' with seq_typing.py for typing',
                                            action=utils.arguments_choices_words(get_species_allowed(), '--org'))
@@ -849,7 +849,7 @@ def python_arguments(program_name, version):
                                         help='Path to DB sequence file. If more than one file is passed, a Blast DB for'
                                              ' each file will be created.')
     parser_blast_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                        help='Name of the organism with DB sequence file provided'
+                                        help='Organism option with DB sequence file provided'
                                              ' ("seqtyping/reference_sequences/" folder) together'
                                              ' with seq_typing.py for typing',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
