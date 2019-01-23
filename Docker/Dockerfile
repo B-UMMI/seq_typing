@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 MAINTAINER Miguel Machado <mpmachado@medicina.ulisboa.pt>
-LABEL version="2.2-01"
+LABEL version="2.3-01"
 
 WORKDIR /NGStools/
 
@@ -19,14 +19,13 @@ ENV PATH="/NGStools/ncbi-blast-2.8.1+/bin:${PATH}"
 # --- ReMatCh ---
 RUN git clone https://github.com/B-UMMI/ReMatCh.git && \
     cd ReMatCh && \
-    # git checkout bowtie_algo && \
     python3 setup.py install && \
     cd /NGStools
+ENV PATH="/NGStools/ReMatCh/ReMatCh/src/samtools-1.3.1/bin:/NGStools/ReMatCh/ReMatCh/src/bcftools-1.3.1/bin:/NGStools/ReMatCh/ReMatCh/src/bowtie2-2.2.9:${PATH}"
 
 # -- seq_typing --
 RUN git clone https://github.com/B-UMMI/seq_typing.git && \
     cd seq_typing && \
-    # git checkout bowtie_index && \
     python3 setup.py install
 
 # -- Clean --

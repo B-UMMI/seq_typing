@@ -30,17 +30,19 @@ import time
 import argparse
 
 try:
+    from __init__ import __version__
+
     import modules.utils as utils
     import modules.parse_results as parse_results
 
     from seq_typing import python_arguments as python_arguments
 except ImportError:
+    from seqtyping.__init__ import __version__
+
     from seqtyping.modules import utils as utils
     from seqtyping.modules import parse_results as parse_results
 
     from seqtyping.seq_typing import python_arguments
-
-version = '1.0'
 
 
 def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, stx2_alternative_sequenced_covered,
@@ -105,30 +107,30 @@ def main():
     if sys.version_info[0] < 3:
         sys.exit('Must be using Python 3. Try calling "python3 {}"'.format(program_name))
 
-    parser, parser_reads, _, parser_assembly, _ = python_arguments(program_name=program_name, version=version)
+    parser, parser_reads, _, parser_assembly, _ = python_arguments(program_name=program_name, version=__version__)
     parser.description = 'Gets E. coli stx subtypes'
 
     # Add specific arguments
     parser_reads.add_argument('--stx2covered', type=float,
                               metavar='N',
                               help='Minimal percentage of sequence covered to consider extra stx2'
-                                   ' subtypes (value between [0, 100]) (default: 100)',
+                                   ' subtypes (value between [0, 100])',
                               required=False, default=100)
     parser_reads.add_argument('--stx2identity', type=float,
                               metavar='N',
                               help='Minimal sequence identity to consider extra stx2'
-                                   ' subtypes (value between [0, 100]) (default: 99.5)',
+                                   ' subtypes (value between [0, 100])',
                               required=False, default=99.5)
 
     parser_assembly.add_argument('--stx2covered', type=float,
                                  metavar='N',
                                  help='Minimal percentage of sequence covered to consider extra stx2'
-                                      ' subtypes (value between [0, 100]) (default: 100)',
+                                      ' subtypes (value between [0, 100])',
                                  required=False, default=100)
     parser_assembly.add_argument('--stx2identity', type=float,
                                  metavar='N',
                                  help='Minimal sequence identity to consider extra stx2'
-                                      ' subtypes (value between [0, 100]) (default: 99.5)',
+                                      ' subtypes (value between [0, 100])',
                                  required=False, default=99.5)
 
     args = parser.parse_args()
@@ -157,7 +159,7 @@ def main():
     # Start logger
     logfile, time_str = utils.start_logger(args.outdir)
 
-    _ = utils.general_information(script_name=program_name, logfile=logfile, version=version,
+    _ = utils.general_information(script_name=program_name, logfile=logfile, version=__version__,
                                   outdir=args.outdir, time_str=time_str)
     print('\n')
 

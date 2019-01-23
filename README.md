@@ -398,13 +398,17 @@ General facultative options:
  </div>
 </html>
 
-For the following organisms, references sequences are provided for serotyping.
-* _Escherichia coli_
-* _Haemophilus influenzae_
-* _Streptococcus agalactiae_
-* Dengue virus (with genotype information)
+For the following organisms, references sequences are provided.
+* **Serotyping**:
+  * _Escherichia coli_
+  * _Haemophilus influenzae_
+  * _GBS sero_ (Group B Streptococcus, _Streptococcus agalactiae_, serotype)
+  * _Dengue virus_ (with genotype information)
+* **Other types**:
+  * _GBS pili_ (Group B Streptococcus, _Streptococcus agalactiae_, pili typing)
+  * _GBS surf_ (Group B Streptococcus, _Streptococcus agalactiae_, surface protein typing)
 
-Use `--org` option with one of those organisms
+Use `--org` option with one of those organisms options
 
 #### Usage examples
 
@@ -838,6 +842,9 @@ __seq_typing.ecoli_stx_subtyping.txt__
 Text file with the typing result. The secondary results for _stx2_ genes are presented between brackets.  
 Example:  
 `stx1a:stx2c(stx2d)`  
+*__NOTE__*: For _stx2_ gene, _stx2a_, _stx2c_ and _stx2d_ variants are grouped together as _stx2acd_ due to the fact
+ that all of these subtypes are the most potent ones to cause HUS and are difficult to separate from each other by the
+ methods in use right now.  
 
 __seq_typing.ecoli_stx_subtyping.report_types.tab__  
 Tabular file with detailed results similar to the above _seq_typing.report_types.tab_ file:  
