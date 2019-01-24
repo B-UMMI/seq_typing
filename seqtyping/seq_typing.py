@@ -574,6 +574,9 @@ def reads_subcommand(args):
         folders_2_remove.append(module_dir)
         utils.saveVariableToPickle([references_results, module_dir], pickle_file)
 
+    if not args.doNotRemoveConsensus:
+        folders_2_remove.append(module_dir)
+
     return folders_2_remove, references_results, args.reference, references_headers
 
 
@@ -683,7 +686,7 @@ def python_arguments(program_name, version):
     parser_reads_reference = parser_reads.add_mutually_exclusive_group(required=True)
     parser_reads_reference.add_argument('-r', '--reference', nargs='+', type=str,
                                         metavar='/path/to/reference/sequences.file',
-                                        help='Path to reference sequences file. If Bowtie2 index was already produced,'
+                                        help='Path to reference sequences files. If Bowtie2 index was already produced,'
                                              ' only provide the file name that ends with ".1.bt2", but without this'
                                              ' termination (for example, for a Bowtie2 index'
                                              ' "/file/sequences.fasta.1.bt2", only provide "/file/sequences.fasta").'
@@ -770,7 +773,7 @@ def python_arguments(program_name, version):
     parser_index_reference = parser_index.add_mutually_exclusive_group(required=True)
     parser_index_reference.add_argument('-r', '--reference', nargs='+', type=str,
                                         metavar='/path/to/reference/sequences.fasta',
-                                        help='Path to reference sequences file. If more than one file is passed, a'
+                                        help='Path to reference sequences files. If more than one file is passed, a'
                                              ' Bowtie2 index for each file will be created.')
     parser_index_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
                                         help='Organism option with reference sequences provided'
@@ -796,14 +799,14 @@ def python_arguments(program_name, version):
     parser_assembly_reference = parser_assembly.add_mutually_exclusive_group(required=True)
     parser_assembly_reference.add_argument('-b', '--blast', nargs='+', type=argparse.FileType('r'),
                                            metavar='/path/to/Blast/db.sequences.file',
-                                           help='Path to DB sequence file. If Blast DB was already produced, only'
+                                           help='Path to DB sequences files. If Blast DB was already produced, only'
                                                 ' provide the file that do not end with ".n*" something (do not use for'
                                                 ' example /blast_db.sequences.fasta.nhr). If no Blast DB is found for'
                                                 ' the DB sequence file, one will be created in --outdir. If more than'
                                                 ' one Blast DB file is passed, a type for each file will be determined.'
                                                 ' Give the files in the same order that the type must be determined.')
     parser_assembly_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                           help='Organism option with DB sequence file provided'
+                                           help='Organism option with DB sequences files provided'
                                                 ' ("seqtyping/reference_sequences/" folder) together'
                                                 ' with seq_typing.py for typing',
                                            action=utils.arguments_choices_words(get_species_allowed(), '--org'))
