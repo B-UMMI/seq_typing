@@ -216,7 +216,6 @@ usage: seq_typing.py reads [-h]
                            [--minDepthCoverage N] [--minGeneIdentity N]
                            [--bowtieAlgo="--very-sensitive-local"]
                            [--doNotRemoveConsensus] [--debug] [--resume]
-                           [--notClean]
 
 Run seq_typing.py using fastq files. If running multiple samples using the
 same reference sequences file, consider use first "seq_typing.py index"

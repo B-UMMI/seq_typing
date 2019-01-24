@@ -561,7 +561,6 @@ def reads_subcommand(args):
     if args.resume and os.path.isfile(pickle_file):
         print('ReMatCh module already run')
         references_results, module_dir = utils.extractVariableFromPickle(pickle_file)
-        folders_2_remove.append(module_dir)
     else:
         _, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, args.reference,
                                                                     args.fastq, args.threads, args.extraSeq,
@@ -571,7 +570,6 @@ def reads_subcommand(args):
                                                                     args.debug, args.doNotRemoveConsensus,
                                                                     args.bowtieAlgo,
                                                                     clean_run_rematch=clean_run_rematch)
-        folders_2_remove.append(module_dir)
         utils.saveVariableToPickle([references_results, module_dir], pickle_file)
 
     if not args.doNotRemoveConsensus:
