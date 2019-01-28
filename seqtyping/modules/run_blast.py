@@ -132,9 +132,14 @@ def run_blast_command(query_file, blast_db, db_type, blast_output, threads=1):
     # command = ['', '-query', query_file, '-db', blast_db, '-out', blast_output, '-outfmt', '', '-dust', 'no',
     #            '-culling_limit', '1', '-num_threads', str(threads)]
 
-    # Remove culling_limit
+    # # Remove culling_limit
+    # command = ['', '-query', query_file, '-db', blast_db, '-out', blast_output, '-outfmt', '', '-dust', 'no',
+    #            '', '', '-num_threads', str(threads)]
+
+    # geneious like
     command = ['', '-query', query_file, '-db', blast_db, '-out', blast_output, '-outfmt', '', '-dust', 'no',
-               '', '', '-num_threads', str(threads)]
+               '', '', '-num_threads', str(threads), '-penalty', '-3', '-reward', '2', '-word_size', '11', '-gapopen',
+               '5', '-gapextend', '2']
 
     if db_type == 'nucl':
         command[0] = 'blastn -task blastn'
