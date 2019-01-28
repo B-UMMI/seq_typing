@@ -182,7 +182,7 @@ optional arguments:
 
 Required one of the following options:
   -r --reference /path/to/reference.fasta  ...
-                        Path to reference sequences file. If more than one
+                        Path to reference sequences files. If more than one
                         file is passed, a Bowtie2 index for each file will be
                         created. (default: None)
   --org escherichia coli
@@ -232,7 +232,7 @@ Required options:
 
 Required one of the following options:
   -r --reference /path/to/reference_sequence.fasta ...
-                        Path to reference sequences file. If Bowtie2 index was
+                        Path to reference sequences files. If Bowtie2 index was
                         already produced, only provide the file name that ends
                         with ".1.bt2", but without this termination (for
                         example, for a Bowtie2 index
@@ -283,7 +283,7 @@ General facultative options:
                         starting with an empty space
                         (like --bowtieAlgo " --very-fast") or using equal
                         sign (like --bowtieAlgo="--very-fast")
-                        (default: "--very-sensitive-local")
+                        (default when not using --org: "--very-sensitive-local")
   --doNotRemoveConsensus
                         Do not remove ReMatCh consensus sequences
   --debug               Debug mode: do not remove temporary files
@@ -313,10 +313,10 @@ optional arguments:
 
 Required one of the following options:
   -f --fasta /path/to/db.sequences.fasta ...
-                        Path to DB sequence file. If more than one file is
+                        Path to DB sequences files. If more than one file is
                         passed, a Blast DB for each file will be created.
   --org escherichia coli
-                        Organism option with DB sequence file provided
+                        Organism option with DB sequences files provided
                         ("seqtyping/reference_sequences/" folder) together with
                         seq_typing.py for typing
 
@@ -360,7 +360,7 @@ Required options:
 
 Required one of the following options:
   -b --blast /path/to/Blast/db.sequences.file ...
-                        Path to DB sequence file. If Blast DB was already
+                        Path to DB sequences files. If Blast DB was already
                         produced, only provide the file that do not end with
                         ".n*" something (do not use for example
                         /blast_db.sequences.fasta.nhr). If no Blast DB is
@@ -369,7 +369,7 @@ Required one of the following options:
                         type for each file will be determined. Give the files
                         in the same order that the type must be determined.
   --org escherichia coli
-                        Organism option with DB sequence file provided
+                        Organism option with DB sequences files provided
                         ("seqtyping/reference_sequences/" folder) together with
                         seq_typing.py for typing
 
@@ -385,7 +385,7 @@ General facultative options:
                         header from the last part containing the type (default: _)
   --minGeneCoverage N   Minimum percentage of target reference sequence
                         covered to consider a sequence to be present (value
-                        between [0, 100]) (default: 60)
+                        between [0, 100]) (default when not using --org: 60)
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
                         between [0, 100]) (default: 80)
@@ -585,7 +585,6 @@ usage: ecoli_stx_subtyping.py reads [-h]
                                     [--minCovCall N] [--minGeneCoverage N]
                                     [--minDepthCoverage N] [--minGeneIdentity N]
                                     [--doNotRemoveConsensus] [--debug] [--resume]
-                                    [--notClean]
 
 Run ecoli_stx_subtyping.py using fastq files
 

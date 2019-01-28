@@ -9,7 +9,7 @@ in a given sample
 
 Copyright (C) 2019 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: January 10, 2019
+Last modified: January 28, 2019
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ except ImportError:
 
 def parse_config(config_file):
     config = {'length_extra_seq': None, 'minimum_depth_presence': None, 'minimum_depth_call': None,
-              'minimum_gene_coverage': None}
+              'minimum_gene_coverage': None, 'bowtie_algorithm': None}
 
     with open(config_file, 'rtU') as reader:
         field = None
@@ -63,8 +63,7 @@ def parse_config(config_file):
                     field = line
                 else:
                     if field is not None:
-                        if field in ['length_extra_seq', 'minimum_depth_presence', 'minimum_depth_call',
-                                     'minimum_gene_coverage']:
+                        if field in list(config.keys()):
                             line = int(line)
                             if field == 'minimum_gene_coverage':
                                 if line < 0 or line > 100:
@@ -540,6 +539,7 @@ def reads_subcommand(args):
         args.minCovPresence = config['minimum_depth_presence']
         args.minCovCall = config['minimum_depth_call']
         args.minGeneCoverage = config['minimum_gene_coverage']
+        args.bowtieAlgo = config['bowtie_algorithm']
         args.typeSeparator = '_'
 
         print('\n'
@@ -549,9 +549,10 @@ def reads_subcommand(args):
               '    minCovPresence: {minCovPresence}\n'
               '    minCovCall: {minCovCall}\n'
               '    minGeneCoverage: {minGeneCoverage}\n'
+              '    bowtieAlgo: {bowtieAlgo}\n'
               '    Type separator character: {typeSeparator}'
               '\n'.format(reference=args.reference, extraSeq=args.extraSeq, minCovPresence=args.minCovPresence,
-                          minCovCall=args.minCovCall, minGeneCoverage=args.minGeneCoverage,
+                          minCovCall=args.minCovCall, minGeneCoverage=args.minGeneCoverage, bowtieAlgo=args.bowtieAlgo,
                           typeSeparator=args.typeSeparator))
 
     pickles_folder = os.path.join(args.outdir, 'pickles', '')
@@ -700,18 +701,17 @@ def python_arguments(program_name, version):
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
     parser_reads_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                               help='Path to the directory where the information will be stored'
-                                                    ' (default: ./',
+                                               help='Path to the directory where the information will be stored',
                                                required=False, default='.')
     parser_reads_optional_general.add_argument('-j', '--threads', type=int, metavar='N',
-                                               help='Number of threads to use (default: 1)', required=False, default=1)
+                                               help='Number of threads to use', required=False, default=1)
     parser_reads_optional_general.add_argument('--mapRefTogether', action='store_true',
                                                help=argparse.SUPPRESS)
     # parser_reads_optional_general.add_argument('--mapRefTogether', action='store_true',
     #                                            help='Map the reads against all references together')
     parser_reads_optional_general.add_argument('--typeSeparator', type=str, metavar='_',
                                                help='Last single character separating the general sequence header from'
-                                                    ' the last part containing the type (default: _)',
+                                                    ' the last part containing the type',
                                                required=False, default='_')
     parser_reads_optional_general.add_argument('--extraSeq', type=int, metavar='N',
                                                help='Sequence length added to both ends of target sequences (usefull to'
@@ -740,14 +740,14 @@ def python_arguments(program_name, version):
                                                required=False, default=60)
     parser_reads_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N',
                                                help='Minimum depth of coverage of target reference sequence to'
-                                                    ' consider a sequence to be present (default: 2)',
+                                                    ' consider a sequence to be present',
                                                required=False, default=2)
     # parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS,
     #                                            required=False, default=80)
     parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
                                                help='Minimum percentage of identity of reference sequence covered to'
                                                     ' consider a gene to be present (value between [0, 100]). One INDEL'
-                                                    ' will be considered as one difference (default: 80)',
+                                                    ' will be considered as one difference',
                                                required=False, default=80)
     parser_reads_optional_general.add_argument('--bowtieAlgo', type=str, metavar='"--very-sensitive-local"',
                                                help='Bowtie2 alignment mode. It can be an end-to-end alignment'
@@ -757,7 +757,8 @@ def python_arguments(program_name, version):
                                                     ' http://bowtie-bio.sourceforge.net/bowtie2/index.shtml .'
                                                     ' This option should be provided between quotes and starting with'
                                                     ' an empty space (like --bowtieAlgo " --very-fast") or using equal'
-                                                    ' sign (like --bowtieAlgo="--very-fast")',
+                                                    ' sign (like --bowtieAlgo="--very-fast") (default when not'
+                                                    ' using --org: "--very-sensitive-local")',
                                                required=False, default='--very-sensitive-local')
     parser_reads_optional_general.add_argument('--doNotRemoveConsensus', action='store_true',
                                                help='Do not remove ReMatCh consensus sequences')
@@ -765,8 +766,6 @@ def python_arguments(program_name, version):
                                                help='Debug mode: do not remove temporary files')
     parser_reads_optional_general.add_argument('--resume', action='store_true',
                                                help='Resume %(prog)s')
-    parser_reads_optional_general.add_argument('--notClean', action='store_true',
-                                               help='Do not remove intermediate files')
 
     parser_index_reference = parser_index.add_mutually_exclusive_group(required=True)
     parser_index_reference.add_argument('-r', '--reference', nargs='+', type=str,
@@ -815,14 +814,13 @@ def python_arguments(program_name, version):
 
     parser_assembly_optional_general = parser_assembly.add_argument_group('General facultative options')
     parser_assembly_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                                  help='Path to the directory where the information will be stored'
-                                                       ' (default: ./)',
+                                                  help='Path to the directory where the information will be stored',
                                                   required=False, default='.')
     parser_assembly_optional_general.add_argument('-j', '--threads', type=int, metavar='N', required=False,
-                                                  help='Number of threads to use (default: 1)', default=1)
+                                                  help='Number of threads to use', default=1)
     parser_assembly_optional_general.add_argument('--typeSeparator', type=str, metavar='_',
                                                   help='Last single character separating the general sequence header'
-                                                       ' from the last part containing the type (default: _)',
+                                                       ' from the last part containing the type',
                                                   required=False, default='_')
     parser_assembly_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N',
                                                   help='Minimum percentage of target reference sequence covered to'
@@ -831,8 +829,7 @@ def python_arguments(program_name, version):
                                                   required=False, default=60)
     parser_assembly_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
                                                   help='Minimum percentage of identity of reference sequence covered'
-                                                       ' to consider a gene to be present (value between [0, 100])'
-                                                       ' (default: 80)',
+                                                       ' to consider a gene to be present (value between [0, 100])',
                                                   required=False, default=80)
     parser_assembly_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N', help=argparse.SUPPRESS,
                                                   required=False, default=1)
@@ -847,18 +844,17 @@ def python_arguments(program_name, version):
     parser_blast_reference = parser_blast.add_mutually_exclusive_group(required=True)
     parser_blast_reference.add_argument('-f', '--fasta', nargs='+', type=argparse.FileType('r'),
                                         metavar='/path/to/db.sequences.fasta',
-                                        help='Path to DB sequence file. If more than one file is passed, a Blast DB for'
-                                             ' each file will be created.')
+                                        help='Path to DB sequences files. If more than one file is passed, a Blast DB'
+                                             ' for each file will be created.')
     parser_blast_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                        help='Organism option with DB sequence file provided'
+                                        help='Organism option with DB sequences files provided'
                                              ' ("seqtyping/reference_sequences/" folder) together'
                                              ' with seq_typing.py for typing',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
     parser_blast_optional_general = parser_blast.add_argument_group('General facultative options')
     parser_blast_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                               help='Path to the directory where the information will be stored'
-                                                    ' (default: ./)',
+                                               help='Path to the directory where the information will be stored',
                                                required=False, default='.')
 
     parser_reads.set_defaults(func=reads_subcommand)

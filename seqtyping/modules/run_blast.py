@@ -129,8 +129,12 @@ def run_blast_command(query_file, blast_db, db_type, blast_output, threads=1):
     if not os.path.isdir(os.path.dirname(blast_output)):
         os.makedirs(os.path.dirname(blast_output))
 
+    # command = ['', '-query', query_file, '-db', blast_db, '-out', blast_output, '-outfmt', '', '-dust', 'no',
+    #            '-culling_limit', '1', '-num_threads', str(threads)]
+
+    # Remove culling_limit
     command = ['', '-query', query_file, '-db', blast_db, '-out', blast_output, '-outfmt', '', '-dust', 'no',
-               '-culling_limit', '1', '-num_threads', str(threads)]
+               '', '', '-num_threads', str(threads)]
 
     if db_type == 'nucl':
         command[0] = 'blastn -task blastn'
