@@ -64,7 +64,7 @@ def parse_config(config_file):
                 else:
                     if field is not None:
                         if field in list(config.keys()):
-                            line = int(line)
+                            line = int(line) if field != 'bowtie_algorithm' else line
                             if field == 'minimum_gene_coverage':
                                 if line < 0 or line > 100:
                                     sys.exit('minimum_gene_coverage in config file must be an integer between 0 and'
