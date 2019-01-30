@@ -436,3 +436,19 @@ def parse_reference(reference, problematic_characters):
         if len(sequence) > 0:
             reference_dict[header] = sequence
     return reference_dict, headers_correspondence
+
+
+def reverse(seq):
+    """Returns a reversed string"""
+    return seq[::-1]
+
+
+def complement(seq):
+    """Returns a complement DNA sequence"""
+    complement_dict = {'A': 'T', 'C': 'G', 'T': 'A', 'G': 'C'}
+    return ''.join(list(map(lambda base: complement_dict[base], list(seq))))
+
+
+def reverse_complement(seq):
+    """"Returns a reverse complement DNA sequence"""
+    return complement(reverse(seq))

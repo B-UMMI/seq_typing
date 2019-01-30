@@ -172,12 +172,14 @@ def main():
     folders_2_remove.append(pickles_folder)
 
     # Run functions
-    folders_2_remove_func, references_results, reference, references_headers = args.func(args)
+    folders_2_remove_func, references_results, reference, references_headers, assembly = args.func(args)
     folders_2_remove.extend(folders_2_remove_func)
 
     # Parse results
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
-                                                args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
+                                                args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
+                                                sample=args.sample, save_new_allele=args.saveNewAllele,
+                                                assembly=assembly)
 
     stx1_result, stx2_result = stx_subtype_parser(
         os.path.join(args.outdir, 'seq_typing.report_types.tab'),

@@ -94,25 +94,37 @@ def clean_headers_reference_file(reference_file, outdir):
 
 def rematch_for_different_references(fastq, references_files, threads, outdir, extraSeq, minCovPresence, minCovCall,
                                      minFrequencyDominantAllele, minGeneCoverage, debug, minGeneIdentity,
-                                     rematch_module, doNotRemoveConsensus, bowtie_algorithm, clean_run_rematch=False):
+                                     rematch_module, doNotRemoveConsensus, bowtie_algorithm='--very-sensitive-local',
+                                     max_number_mapped_location=1, clean_run_rematch=False, save_new_allele=False):
+    if save_new_allele:
+        os.makedirs(os.path.join(outdir, 'new_allele', ''))
+
     references_results = {}
     for x, reference in enumerate(references_files):
         reference_name = os.path.basename(reference) + '_' + str(x)
         ref_dir = os.path.join(outdir, reference_name, '')
         os.makedirs(ref_dir)
         header_gene_list, seq_reference_dict = utils.extractVariableFromPickle(reference + '.pkl')
+
+        not_write_consensus_rematch = not doNotRemoveConsensus and not save_new_allele
+
         time_taken, run_successfully, data_by_gene, sample_data_general, consensus_files, consensus_sequences = \
             rematch_module.run_rematch_module('sample', fastq, reference, threads, ref_dir, extraSeq,
                                               minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage,
-                                              debug, 1, minGeneIdentity, 'first', 7, 'none', seq_reference_dict, 'X',
-                                              bowtie_algorithm, None, header_gene_list, not doNotRemoveConsensus,
-                                              clean_run=clean_run_rematch)
+                                              debug, max_number_mapped_location, minGeneIdentity, 'first', 7, 'none',
+                                              seq_reference_dict, 'X', bowtie_algorithm, None, header_gene_list,
+                                              not_write_consensus_rematch, clean_run=clean_run_rematch)
         if run_successfully:
             pickleFile = os.path.join(outdir, str(reference_name + '.pkl'))
             utils.saveVariableToPickle(data_by_gene, pickleFile)
             references_results[reference] = pickleFile
         else:
             sys.exit('Something went wrong while running ReMatCh for reference {reference}'.format(reference=reference))
+
+        if save_new_allele:
+            from shutil import copyfile
+            copyfile(os.path.join(ref_dir, 'sample.noMatter.fasta'), os.path.join(outdir, 'new_allele', reference))
+
         clean_rematch_folder(consensus_files, reference, ref_dir, doNotRemoveConsensus, debug)
         if not debug and not doNotRemoveConsensus:
             utils.removeDirectory(ref_dir)
@@ -177,7 +189,8 @@ module_timer = partial(utils.timer, name='Module ReMatCh')
 @module_timer
 def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraSeq, minCovPresence, minCovCall,
                 minFrequencyDominantAllele, minGeneCoverage, minGeneIdentity, debug, doNotRemoveConsensus,
-                bowtie_algorithm, clean_run_rematch=False):
+                bowtie_algorithm='--very-sensitive-local', max_number_mapped_location=1, clean_run_rematch=False,
+                save_new_allele=False):
     module_dir = os.path.join(outdir, 'rematch', '')
     utils.removeDirectory(module_dir)
     os.makedirs(module_dir)
@@ -188,7 +201,9 @@ def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraS
     references_results = rematch_for_different_references(fastq, references_files, threads, module_dir, extraSeq,
                                                           minCovPresence, minCovCall, minFrequencyDominantAllele,
                                                           minGeneCoverage, debug, minGeneIdentity, rematch_module,
-                                                          doNotRemoveConsensus, bowtie_algorithm,
-                                                          clean_run_rematch=clean_run_rematch)
+                                                          doNotRemoveConsensus, bowtie_algorithm=bowtie_algorithm,
+                                                          max_number_mapped_location=max_number_mapped_location,
+                                                          clean_run_rematch=clean_run_rematch,
+                                                          save_new_allele=save_new_allele)
 
     return references_results, module_dir

@@ -50,7 +50,7 @@ except ImportError:
 
 def parse_config(config_file):
     config = {'length_extra_seq': None, 'minimum_depth_presence': None, 'minimum_depth_call': None,
-              'minimum_gene_coverage': None, 'bowtie_algorithm': None}
+              'minimum_gene_coverage': None, 'bowtie_algorithm': None, 'maximum_number_mapped_locations': None}
 
     with open(config_file, 'rtU') as reader:
         field = None
@@ -277,7 +277,7 @@ def assembly_subcommand(args):
         references_headers_all[blast] = headers_correspondence
         blast_files.append(blast)
 
-    return folders_2_remove_all, references_results_all, blast_files, references_headers_all
+    return folders_2_remove_all, references_results_all, blast_files, references_headers_all, args.fasta
 
 
 def blast_subcommand(args):
@@ -540,6 +540,7 @@ def reads_subcommand(args):
         args.minCovCall = config['minimum_depth_call']
         args.minGeneCoverage = config['minimum_gene_coverage']
         args.bowtieAlgo = config['bowtie_algorithm']
+        args.maxNumMapLoc = config['maximum_number_mapped_locations']
         args.typeSeparator = '_'
 
         print('\n'
@@ -550,10 +551,11 @@ def reads_subcommand(args):
               '    minCovCall: {minCovCall}\n'
               '    minGeneCoverage: {minGeneCoverage}\n'
               '    bowtieAlgo: {bowtieAlgo}\n'
+              '    maxNumMapLoc: {maxNumMapLoc}\n'
               '    Type separator character: {typeSeparator}'
               '\n'.format(reference=args.reference, extraSeq=args.extraSeq, minCovPresence=args.minCovPresence,
                           minCovCall=args.minCovCall, minGeneCoverage=args.minGeneCoverage, bowtieAlgo=args.bowtieAlgo,
-                          typeSeparator=args.typeSeparator))
+                          maxNumMapLoc=args.maxNumMapLoc, typeSeparator=args.typeSeparator))
 
     pickles_folder = os.path.join(args.outdir, 'pickles', '')
 
@@ -569,14 +571,16 @@ def reads_subcommand(args):
                                                                     args.minFrequencyDominantAllele,
                                                                     args.minGeneCoverage, args.minGeneIdentity,
                                                                     args.debug, args.doNotRemoveConsensus,
-                                                                    args.bowtieAlgo,
-                                                                    clean_run_rematch=clean_run_rematch)
+                                                                    bowtie_algorithm=args.bowtieAlgo,
+                                                                    max_number_mapped_loci=args.maxNumMapLoc,
+                                                                    clean_run_rematch=clean_run_rematch,
+                                                                    save_new_allele=args.saveNewAllele)
         utils.saveVariableToPickle([references_results, module_dir], pickle_file)
 
-    if not args.doNotRemoveConsensus:
+    if not args.doNotRemoveConsensus and not args.saveNewAllele:
         folders_2_remove.append(module_dir)
 
-    return folders_2_remove, references_results, args.reference, references_headers
+    return folders_2_remove, references_results, args.reference, references_headers, None
 
 
 def index_subcommand(args):
@@ -700,6 +704,8 @@ def python_arguments(program_name, version):
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
+    parser_reads_optional_general.add_argument('-s', '--sample', type=str, metavar='sample-ID', help='Sample name',
+                                               required=False, default='sample')
     parser_reads_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
                                                help='Path to the directory where the information will be stored',
                                                required=False, default='.')
@@ -760,8 +766,15 @@ def python_arguments(program_name, version):
                                                     ' sign (like --bowtieAlgo="--very-fast") (default when not'
                                                     ' using --org: "--very-sensitive-local")',
                                                required=False, default='--very-sensitive-local')
+    parser_reads_optional_general.add_argument('--maxNumMapLoc', type=int, metavar='N',
+                                               help='Maximum number of locations to which a read can map (sometimes'
+                                                    ' useful when mapping against similar sequences) (default when not'
+                                                    ' using --org: 1)',
+                                               required=False, default=1)
     parser_reads_optional_general.add_argument('--doNotRemoveConsensus', action='store_true',
                                                help='Do not remove ReMatCh consensus sequences')
+    parser_reads_optional_general.add_argument('--saveNewAllele', action='store_true',
+                                               help='Save the new allele found for the selected type')
     parser_reads_optional_general.add_argument('--debug', action='store_true',
                                                help='Debug mode: do not remove temporary files')
     parser_reads_optional_general.add_argument('--resume', action='store_true',
@@ -813,6 +826,8 @@ def python_arguments(program_name, version):
                                                     help='Blast DB type (available options: %(choices)s)')
 
     parser_assembly_optional_general = parser_assembly.add_argument_group('General facultative options')
+    parser_assembly_optional_general.add_argument('-s', '--sample', type=str, metavar='sample-ID', help='Sample name',
+                                                  required=False, default='sample')
     parser_assembly_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
                                                   help='Path to the directory where the information will be stored',
                                                   required=False, default='.')
@@ -833,6 +848,8 @@ def python_arguments(program_name, version):
                                                   required=False, default=80)
     parser_assembly_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N', help=argparse.SUPPRESS,
                                                   required=False, default=1)
+    parser_assembly_optional_general.add_argument('--saveNewAllele', action='store_true',
+                                                  help='Save the new allele found for the selected type')
     parser_assembly_optional_general.add_argument('--debug', action='store_true',
                                                   help='Debug mode: do not remove temporary files')
     parser_assembly_optional_general.add_argument('--resume', action='store_true', help=argparse.SUPPRESS)
@@ -897,12 +914,14 @@ def main():
     folders_2_remove.append(pickles_folder)
 
     # Run functions
-    folders_2_remove_func, references_results, reference, references_headers = args.func(args)
+    folders_2_remove_func, references_results, reference, references_headers, assembly = args.func(args)
     folders_2_remove.extend(folders_2_remove_func)
 
     # Parse results
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
-                                                args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
+                                                args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
+                                                sample=args.sample, save_new_allele=args.saveNewAllele,
+                                                assembly=assembly)
 
     if not args.debug:
         for folder in folders_2_remove:

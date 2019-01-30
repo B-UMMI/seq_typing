@@ -1,5 +1,6 @@
 import os.path
 from functools import partial
+from itertools import groupby as itertools_groupby
 
 try:
     import modules.utils as utils
@@ -7,7 +8,7 @@ except ImportError:
     from seqtyping.modules import utils as utils
 
 
-extra_blast_fields = ['query', 'q_start', 'q_end', 's_start', 's_end', 'evalue']
+extra_blast_fields = ['query', 'q_start', 'q_end', 'q_length', 's_start', 's_end', 's_length', 'evalue']
 
 
 def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage):
@@ -110,7 +111,8 @@ def get_results(references_results, min_gene_coverage, min_depth_coverage, type_
                                 [original_header] + [references_results[reference][new_header][field]
                                                      for field in fields]
 
-    return ':'.join([results[reference] for reference in references_files]), results_info, probable_results, improbable_results
+    return ':'.join([results[reference] for reference in references_files]), results_info, probable_results, \
+           improbable_results
 
 
 def add_empty_blast_info(data_dict):
@@ -125,8 +127,8 @@ def add_empty_blast_info(data_dict):
     Returns
     -------
     data_dict : dict
-        Return the input dictionary already with ['query', 'q_start', 'q_end', 's_start', 's_end', 'evalue'] fields
-        as 'NA'
+        Return the input dictionary already with ['query', 'q_start', 'q_end', 'q_length', 's_start', 's_end',
+        's_length', 'evalue'] fields as 'NA'
     """
     for field in extra_blast_fields:
         data_dict[field] = 'NA'
@@ -153,7 +155,109 @@ def split_references_results_by_references(references_results, references_header
     return organized_references_results
 
 
-def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results, type_separator):
+def save_new_allele_reads(sample, new_allele_dir, rematch_consensus, sequence_selected, selected_type):
+    """
+    Save the new allele found using reads in a reference file folder, under the file name of the selected type and with
+    sample's name as header
+
+    Parameters
+    ----------
+    sample : str
+        Sample's name
+    new_allele_dir : str
+        Path to the folder where the new allele will be saved
+    rematch_consensus : str
+        Path to ReMatCh consensus file for the reference file used and from which the new allele will be retreived
+    sequence_selected : str
+        Header of the selected sequence
+    selected_type : str
+        Type from the selected sequence
+
+    Returns
+    -------
+
+    """
+    reference_file = os.path.basename(rematch_consensus)
+    os.makedirs(os.path.join(new_allele_dir, reference_file, ''))
+    reader = open(rematch_consensus, mode='rt', newline=None)
+    fasta_iter = (g for k, g in itertools_groupby(reader, lambda x: x.startswith('>')))
+    for header in fasta_iter:
+        header = header.__next__()[1:].rstrip('\r\n')
+        seq = ''.join(s.rstrip('\r\n') for s in fasta_iter.__next__())
+        if header == sequence_selected:
+            with open(os.path.join(new_allele_dir, reference_file,
+                                   '{selected_type}.fasta'.format(selected_type=selected_type)), 'wt') as writer:
+                writer.write('>{}\n'.format(sample))
+                writer.write('\n'.join(utils.chunkstring(seq, 80)) + '\n')
+            break
+    reader.close()
+
+
+def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, selected_type, assembly,
+                             q_start, q_end, q_length, s_start, s_end, s_length):
+    """
+    Save the new allele found using reads in a reference file folder, under the file name of the selected type and with
+    sample's name as header
+
+    Parameters
+    ----------
+    sample : str
+        Sample's name
+    new_allele_dir : str
+        Path to the folder where the new allele will be saved
+    rematch_consensus : str
+        Path to ReMatCh consensus file for the reference file used and from which the new allele will be retreived
+    sequence_selected : str
+        Header of the selected sequence
+    selected_type : str
+        Type from the selected sequence
+
+    Returns
+    -------
+
+    """
+
+    os.makedirs(os.path.join(new_allele_dir, os.path.basename(reference_file), ''))
+    reader = open(assembly, mode='rt', newline=None)
+    fasta_iter = (g for k, g in itertools_groupby(reader, lambda x: x.startswith('>')))
+    for header in fasta_iter:
+        header = header.__next__()[1:].rstrip('\r\n')
+        seq = ''.join(s.rstrip('\r\n') for s in fasta_iter.__next__())
+        if header == query:
+            if s_start > s_end:
+                starting_position = q_start - (s_length - s_start)
+                ending_position = q_end + s_end - 1
+            else:
+                starting_position = q_start - (s_start - 1)
+                ending_position = q_end + (s_length - s_end)
+
+            partial_seq = ''
+            if starting_position < 1:
+                starting_position = 1
+                partial_seq = '_partial'
+            if ending_position > q_length:
+                ending_position = q_length
+                partial_seq = '_partial'
+
+            seq = seq[(starting_position - 1):ending_position]
+            if s_start > s_end:
+                seq = utils.reverse_complement(seq)
+
+            with open(os.path.join(new_allele_dir, os.path.basename(reference_file),
+                                   '{selected_type}.fasta'.format(selected_type=selected_type)), 'wt') as writer:
+                writer.write('>{sample}{partial_seq}\n'.format(sample=sample, partial_seq=partial_seq))
+                writer.write('\n'.join(utils.chunkstring(seq, 80)) + '\n')
+            break
+    reader.close()
+
+
+def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results, type_separator, assembly,
+                  sample='sample', save_new_allele=False):
+    new_allele_dir = os.path.join(outdir, 'new_allele', '')
+    if save_new_allele:
+        utils.removeDirectory(new_allele_dir)
+        os.makedirs(new_allele_dir)
+
     with open(os.path.join(outdir, 'seq_typing.report.txt'), 'wt') as writer:
         writer.write(seq_type + '\n')
 
@@ -176,6 +280,20 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                       '\n')
                 writer.write('\t'.join(['selected', reference, data[0].rsplit(type_separator, 1)[1]] +
                                        list(map(str, data))) + '\n')
+
+                if save_new_allele and (data[1] < 100 or data[3] < 100):
+                    if assembly is None:
+                        rematch_consensus = os.path.join(outdir, 'rematch', 'new_allele',
+                                                         os.path.basename(reference))
+                        save_new_allele_reads(sample=sample, new_allele_dir=new_allele_dir,
+                                              rematch_consensus=rematch_consensus, sequence_selected=data[0],
+                                              selected_type=data[0].rsplit(type_separator, 1)[1])
+                    else:
+                        save_new_allele_assembly(sample=sample, new_allele_dir=new_allele_dir, reference_file=reference,
+                                                 query=data[4], selected_type=data[0].rsplit(type_separator, 1)[1],
+                                                 assembly=assembly, q_start=data[5], q_end=data[6], q_length=data[7],
+                                                 s_start=data[8], s_end=data[9], s_length=data[10])
+
                 typeable_references = True
 
         if typeable_references is False:
@@ -207,19 +325,19 @@ module_timer = partial(utils.timer, name='Module Parse results')
 
 @module_timer
 def parse_results(references_results, references_files, references_headers, outdir, min_gene_coverage,
-                  min_depth_coverage, type_separator):
-    try:
-        references_results = split_references_results_by_references(references_results, references_headers)
-    except TypeError:
-        print('Parsing assembly results')
-    else:
+                  min_depth_coverage, type_separator, sample='sample', save_new_allele=False, assembly=None):
+    if assembly is None:
         print('Parsing reads results')
-    finally:
-        seq_type, seq_type_info, probable_results, improbable_results = get_results(references_results,
-                                                                                    min_gene_coverage,
-                                                                                    min_depth_coverage, type_separator,
-                                                                                    references_files,
-                                                                                    references_headers)
-        write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results, type_separator)
+        references_results = split_references_results_by_references(references_results, references_headers)
+    else:
+        print('Parsing assembly results')
+
+    seq_type, seq_type_info, probable_results, improbable_results = get_results(references_results,
+                                                                                min_gene_coverage,
+                                                                                min_depth_coverage, type_separator,
+                                                                                references_files,
+                                                                                references_headers)
+    write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results, type_separator, assembly,
+                  sample=sample, save_new_allele=save_new_allele)
 
     return seq_type, seq_type_info, probable_results, improbable_results

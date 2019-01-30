@@ -129,17 +129,9 @@ def run_blast_command(query_file, blast_db, db_type, blast_output, threads=1):
     if not os.path.isdir(os.path.dirname(blast_output)):
         os.makedirs(os.path.dirname(blast_output))
 
-    # command = ['', '-query', query_file, '-db', blast_db, '-out', blast_output, '-outfmt', '', '-dust', 'no',
-    #            '-culling_limit', '1', '-num_threads', str(threads)]
-
-    # # Remove culling_limit
-    # command = ['', '-query', query_file, '-db', blast_db, '-out', blast_output, '-outfmt', '', '-dust', 'no',
-    #            '', '', '-num_threads', str(threads)]
-
-    # geneious like
+    # Remove culling_limit
     command = ['', '-query', query_file, '-db', blast_db, '-out', blast_output, '-outfmt', '', '-dust', 'no',
-               '', '', '-num_threads', str(threads), '-penalty', '-3', '-reward', '2', '-word_size', '11', '-gapopen',
-               '5', '-gapextend', '2']
+               '-num_threads', str(threads)]
 
     if db_type == 'nucl':
         command[0] = 'blastn -task blastn'
@@ -191,10 +183,11 @@ def parse_blast_output(blast_output):
                                                  'gene_number_positions_multiple_alleles': 0,
                                                  'gene_mean_read_coverage': 1,
                                                  'gene_identity': float(line[10]),
-                                                 'q_start': int(line[4]),
-                                                 'q_end': int(line[5]), 's_start': int(line[6]),
-                                                 's_end': int(line[7]), 'evalue': float(line[8]),
-                                                 'gaps': int(line[13]), 'query': line[0],
+                                                 'q_start': int(line[4]), 'q_end': int(line[5]),
+                                                 'q_length': int(line[1]),
+                                                 's_start': int(line[6]), 's_end': int(line[7]),
+                                                 's_length': int(line[3]),
+                                                 'evalue': float(line[8]), 'gaps': int(line[13]), 'query': line[0],
                                                  'alignment_length': int(line[9]), 'subject_length': int(line[3])}
                     else:
                         previous_blast_results = output_blast[line[2]]
@@ -203,9 +196,10 @@ def parse_blast_output(blast_output):
                                                  'gene_low_coverage': 0, 'gene_number_positions_multiple_alleles': 0,
                                                  'gene_mean_read_coverage': 1, 'gene_identity': float(line[10]),
                                                  'q_start': int(line[4]), 'q_end': int(line[5]),
+                                                 'q_length': int(line[1]),
                                                  's_start': int(line[6]), 's_end': int(line[7]),
-                                                 'evalue': float(line[8]),
-                                                 'gaps': int(line[13]), 'query': line[0],
+                                                 's_length': int(line[3]),
+                                                 'evalue': float(line[8]), 'gaps': int(line[13]), 'query': line[0],
                                                  'alignment_length': int(line[9]), 'subject_length': int(line[3])}
 
                         to_change = False
