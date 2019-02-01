@@ -209,13 +209,14 @@ Run seq_typing.py using fastq files.
 usage: seq_typing.py reads [-h]
                            -f /path/to/input/file.fq.gz ...
                            -r /path/to/reference_sequence.fasta ... | --org escherichia coli
-                           [-o /path/to/output/directory/] [-j N]
+                           [-s sample-ID] [-o /path/to/output/directory/] [-j N]
                            [--typeSeparator _]
                            [--extraSeq N] [--minCovPresence N]
                            [--minCovCall N] [--minGeneCoverage N]
                            [--minDepthCoverage N] [--minGeneIdentity N]
-                           [--bowtieAlgo="--very-sensitive-local"]
-                           [--doNotRemoveConsensus] [--debug] [--resume]
+                           [--bowtieAlgo="--very-sensitive-local"] [--maxNumMapLoc N]
+                           [--doNotRemoveConsensus] [--saveNewAllele]
+                           [--debug] [--resume]
 
 Run seq_typing.py using fastq files. If running multiple samples using the
 same reference sequences file, consider use first "seq_typing.py index"
@@ -248,6 +249,8 @@ Required one of the following options:
                         ("seqtyping/reference_sequences/" folder)
 
 General facultative options:
+  -s --sample sample-ID
+                        Sample name (default: sample)
   -o --outdir /path/to/output/directory/
                         Path to the directory where the information will be
                         stored (default: ./)
@@ -284,6 +287,11 @@ General facultative options:
                         (like --bowtieAlgo " --very-fast") or using equal
                         sign (like --bowtieAlgo="--very-fast")
                         (default when not using --org: "--very-sensitive-local")
+  --maxNumMapLoc N      Maximum number of locations to which a read can map
+                        (sometimes useful when mapping against similar sequences)
+                        (default when not using --org: 1)
+  --saveNewAllele       Save the new allele found for the selected type
+                        (default: false)
   --doNotRemoveConsensus
                         Do not remove ReMatCh consensus sequences
   --debug               Debug mode: do not remove temporary files
@@ -342,9 +350,10 @@ If running multiple samples using the same DB sequence file, consider use first 
 usage: seq_typing.py assembly [-h]
                               -f /path/to/query/assembly_file.fasta
                               -b /path/to/Blast/db.sequences.file ... -t nucl | --org escherichia coli
-                              [-o /path/to/output/directory/] [-j N]
+                              [-s sample-ID] [-o /path/to/output/directory/] [-j N]
                               [--typeSeparator _] [--minGeneCoverage N]
-                              [--minGeneIdentity N] [--debug]
+                              [--minGeneIdentity N] [--saveNewAllele]
+                              [--debug] [--resume]
 
 Run seq_typing.py using a fasta file. If running multiple samples using the
 same DB sequence file, consider use first "seq_typing.py blast"
@@ -377,6 +386,8 @@ Required option for --blast:
   -t --type nucl        Blast DB type (available options: nucl, prot)
 
 General facultative options:
+  -s --sample sample-ID
+                        Sample name (default: sample)
   -o --outdir /path/to/output/directory/
                         Path to the directory where the information will be
                         stored (default: ./)
@@ -389,7 +400,10 @@ General facultative options:
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
                         between [0, 100]) (default: 80)
+  --saveNewAllele       Save the new allele found for the selected type
+                        (default: false)
   --debug               Debug mode: do not remove temporary files
+  --resume              Resume seq_typing.py assembly
 ```
 
 #### Organisms typing
@@ -408,6 +422,7 @@ For the following organisms, references sequences are provided.
 * **Other types**:
   * _GBS pili_ (Group B Streptococcus, _Streptococcus agalactiae_, pili typing)
   * _GBS surf_ (Group B Streptococcus, _Streptococcus agalactiae_, surface protein typing)
+  * _stx subtyping_ (_Escherichia coli_ stx subtyping)
 
 Use `--org` option with one of those organisms options
 
@@ -579,12 +594,14 @@ usage: ecoli_stx_subtyping.py reads [-h]
                                     -f /path/to/input/file.fq.gz ...
                                     -r /path/to/reference_sequence.fasta ... | --org stx subtyping
                                     [--stx2covered N] [--stx2identity N]
-                                    [-o /path/to/output/directory/] [-j N]
+                                    [--sample sample-ID] [-o /path/to/output/directory/] [-j N]
                                     [--typeSeparator _]
                                     [--extraSeq N] [--minCovPresence N]
                                     [--minCovCall N] [--minGeneCoverage N]
                                     [--minDepthCoverage N] [--minGeneIdentity N]
-                                    [--doNotRemoveConsensus] [--debug] [--resume]
+                                    [--bowtieAlgo="--very-sensitive-local"] [--maxNumMapLoc N]
+                                    [--doNotRemoveConsensus] [--saveNewAllele]
+                                    [--debug] [--resume]
 
 Run ecoli_stx_subtyping.py using fastq files
 
@@ -611,6 +628,8 @@ ecoli_stx_subtyping specific facultative options:
                         subtypes (value between [0, 100]) (default: 99.5)
 
 General facultative options:
+  -s --sample sample-ID
+                        Sample name (default: sample)
   -o --outdir /path/to/output/directory/
                         Path to the directory where the information will be
                         stored (default: ./)
@@ -644,11 +663,16 @@ General facultative options:
                         starting with an empty space
                         (like --bowtieAlgo " --very-fast") or using equal
                         sign (like --bowtieAlgo="--very-fast")
-                        (default: "--very-sensitive-local")
+                        (default when not using --org: "--very-sensitive-local")
+  --maxNumMapLoc N      Maximum number of locations to which a read can map
+                        (sometimes useful when mapping against similar sequences)
+                        (default when not using --org: 1)
+  --saveNewAllele       Save the new allele found for the selected type
+                        (default: false)
   --doNotRemoveConsensus
                         Do not remove ReMatCh consensus sequences
   --debug               Debug mode: do not remove temporary files
-  --resume              Resume ecoli_stx_subtyping.py reads
+  --resume              Resume seq_typing.py reads
 ```
 
 ##### ecoli_stx_subtyping Assembly
@@ -664,9 +688,10 @@ usage: ecoli_stx_subtyping.py assembly [-h]
                                        -f /path/to/query/assembly_file.fasta
                                        -b /path/to/Blast/db.sequences.file ... -t nucl | --org stx subtyping
                                        [--stx2covered N] [--stx2identity N]
-                                       [-o /path/to/output/directory/] [-j N]
+                                       [--sample sample-ID] [-o /path/to/output/directory/] [-j N]
                                        [--typeSeparator _] [--minGeneCoverage N]
-                                       [--minGeneIdentity N] [--debug]
+                                       [--minGeneIdentity N] [--saveNewAllele]
+                                       [--debug] [--resume]
 
 Run ecoli_stx_subtyping.py using a fasta file. If running multiple samples using the
 same DB sequence file, consider use first "seq_typing.py blast"
@@ -705,6 +730,8 @@ ecoli_stx_subtyping specific facultative options:
                         subtypes (value between [0, 100]) (default: 99.5)
 
 General facultative options:
+  -s --sample sample-ID
+                        Sample name (default: sample)
   -o --outdir /path/to/output/directory/
                         Path to the directory where the information will be
                         stored (default: ./)
@@ -717,7 +744,10 @@ General facultative options:
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
                         between [0, 100]) (default: 80)
+  --saveNewAllele       Save the new allele found for the selected type
+                        (default: false)
   --debug               Debug mode: do not remove temporary files
+  --resume              Resume seq_typing.py reads
 ```
 
 ##### Blast
@@ -828,6 +858,25 @@ Example of Dengue virus serotyping and genotyping (only one reference file) usin
 | other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 1-V   | gb:GQ868570|...|Subtype:1-V|Host:Human|seqTyping_1-V     | 100.0             | 1              | 99.479            | NODE_2_length_10199_cov_229.028848  | 13      | 10188 | 1       | 10176 | 0.0    |
 | other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 4-II  | gb:GQ868585|...|Subtype:4-II|Host:Human|seqTyping_4-II   | 100.0             | 1              | 99.38             | NODE_4_length_10182_cov_29.854132   | 13      | 10173 | 1       | 10161 | 0.0    |
 
+__new_allele/__  
+Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. The header of the sequence will contain the sample name (the default is "sample").  
+
+Example for Dengue virus serotyping and genotyping:
+```
+/outdir/
+        seq_typing.report.txt
+        seq_typing.report_types.tab
+        
+        new_allele/
+                   1_GenotypesDENV_14-05-18.fasta/
+                                                  3-III.fasta
+                                                  
+                                                             >sample
+                                                             ATGTAAGCATGAGGTCACCAT ...
+        
+        run.20190131-162341.log
+```
+
 __run.*.log__  
 Running log file.  
 
@@ -858,6 +907,25 @@ Example (using reads):
 | other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1B:14:AM230663:A:seqTyping_stx1a | 100.0             | 45.06666666666667  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
 | other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:10:EF441604:C:seqTyping_stx2c | 100.0             | 17.2               | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     |
 | other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2d | stx2B:11:FM998840:D:seqTyping_stx2d | 100.0             | 9.996296296296297  | 99.62962962962963 | NA    | NA      | NA    | NA      | NA    | NA     |
+
+__new_allele/__  
+Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. The header of the sequence will contain the sample name (the default is "sample").  
+
+Example:
+```
+/outdir/
+        seq_typing.ecoli_stx_subtyping.txt
+        seq_typing.ecoli_stx_subtyping.report_types.tab
+        
+        new_allele/
+                   2_virulence_db.stx2_subtyping.fasta/
+                                                       stx2c.fasta
+                                                  
+                                                                  >sample
+                                                                  ATGTAAGCATGAGGTCACCAT ...
+        
+        run.20190131-162341.log
+```
 
 __run.*.log__  
 Running log file.  

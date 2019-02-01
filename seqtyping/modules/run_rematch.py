@@ -123,7 +123,8 @@ def rematch_for_different_references(fastq, references_files, threads, outdir, e
 
         if save_new_allele:
             from shutil import copyfile
-            copyfile(os.path.join(ref_dir, 'sample.noMatter.fasta'), os.path.join(outdir, 'new_allele', reference))
+            copyfile(os.path.join(ref_dir, 'sample.noMatter.fasta'),
+                     os.path.join(outdir, 'new_allele', os.path.basename(reference)))
 
         clean_rematch_folder(consensus_files, reference, ref_dir, doNotRemoveConsensus, debug)
         if not debug and not doNotRemoveConsensus:

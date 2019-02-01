@@ -19,7 +19,7 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage):
     fields = ['gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for gene, rematch_results in data_by_gene.items():
         if rematch_results['gene_mean_read_coverage'] < min_depth_coverage:
-            continue
+            improbable_sequences[rematch_results['gene_coverage']] = gene
         else:
             if rematch_results['gene_coverage'] >= min_gene_coverage:
                 if rematch_results['gene_coverage'] not in sequence:
@@ -196,8 +196,8 @@ def save_new_allele_reads(sample, new_allele_dir, rematch_consensus, sequence_se
 def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, selected_type, assembly,
                              q_start, q_end, q_length, s_start, s_end, s_length):
     """
-    Save the new allele found using reads in a reference file folder, under the file name of the selected type and with
-    sample's name as header
+    Save the new allele found using the assembly in a reference file folder, under the file name of the selected type
+    and with sample's name as header
 
     Parameters
     ----------
@@ -205,12 +205,26 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
         Sample's name
     new_allele_dir : str
         Path to the folder where the new allele will be saved
-    rematch_consensus : str
-        Path to ReMatCh consensus file for the reference file used and from which the new allele will be retreived
-    sequence_selected : str
-        Header of the selected sequence
+    reference_file : str
+        Path to the reference file used as subject in Blast search
+    query : str
+        Header of the assembly that give a hit
     selected_type : str
         Type from the selected sequence
+    assembly : str
+        Path to the assembly used as query in Blast search
+    q_start : int
+        Query hit starting position
+    q_end : int
+        Query hit ending position
+    q_length : int
+        Query length
+    s_start : int
+        Subject hit starting position
+    s_end : int
+        Subject hit ending position
+    s_length : int
+        Subject length
 
     Returns
     -------
@@ -318,6 +332,9 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
             if len(data) > 0:
                 writer.write('\t'.join(['most_likely', reference, data[0].rsplit(type_separator, 1)[1]] +
                                        list(map(str, data))) + '\n')
+
+    if save_new_allele and assembly is None:
+        utils.removeDirectory(os.path.join(outdir, 'rematch', 'new_allele', ''))
 
 
 module_timer = partial(utils.timer, name='Module Parse results')

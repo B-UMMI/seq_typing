@@ -572,12 +572,12 @@ def reads_subcommand(args):
                                                                     args.minGeneCoverage, args.minGeneIdentity,
                                                                     args.debug, args.doNotRemoveConsensus,
                                                                     bowtie_algorithm=args.bowtieAlgo,
-                                                                    max_number_mapped_loci=args.maxNumMapLoc,
+                                                                    max_number_mapped_location=args.maxNumMapLoc,
                                                                     clean_run_rematch=clean_run_rematch,
                                                                     save_new_allele=args.saveNewAllele)
         utils.saveVariableToPickle([references_results, module_dir], pickle_file)
 
-    if not args.doNotRemoveConsensus and not args.saveNewAllele:
+    if not args.doNotRemoveConsensus:
         folders_2_remove.append(module_dir)
 
     return folders_2_remove, references_results, args.reference, references_headers, None
