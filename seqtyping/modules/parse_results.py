@@ -179,18 +179,22 @@ def save_new_allele_reads(sample, new_allele_dir, rematch_consensus, sequence_se
     """
     reference_file = os.path.basename(rematch_consensus)
     os.makedirs(os.path.join(new_allele_dir, reference_file, ''))
-    reader = open(rematch_consensus, mode='rt', newline=None)
-    fasta_iter = (g for k, g in itertools_groupby(reader, lambda x: x.startswith('>')))
-    for header in fasta_iter:
-        header = header.__next__()[1:].rstrip('\r\n')
-        seq = ''.join(s.rstrip('\r\n') for s in fasta_iter.__next__())
-        if header == sequence_selected:
-            with open(os.path.join(new_allele_dir, reference_file,
-                                   '{selected_type}.fasta'.format(selected_type=selected_type)), 'wt') as writer:
-                writer.write('>{}\n'.format(sample))
-                writer.write('\n'.join(utils.chunkstring(seq, 80)) + '\n')
-            break
-    reader.close()
+    with open(rematch_consensus, mode='rt', newline=None) as reader:
+        for line in reader:
+            if line.startswith('>'):
+                header = line.rstrip('\r\n')[1:]
+                if header == sequence_selected:
+                    seq = ''
+                    for line in reader:
+                        if not line.startswith('>'):
+                            seq += line.rstrip('\r\n')
+                        else:
+                            break
+                    with open(os.path.join(new_allele_dir, reference_file,
+                                           '{selected_type}.fasta'.format(selected_type=selected_type)), 'wt') as writer:
+                        writer.write('>{}\n'.format(sample))
+                        writer.write('\n'.join(utils.chunkstring(seq, 80)) + '\n')
+                    break
 
 
 def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, selected_type, assembly,
