@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 MAINTAINER Miguel Machado <mpmachado@medicina.ulisboa.pt>
-LABEL version="2.3"
+LABEL version="2.3-dev"
 
 WORKDIR /NGStools/
 
@@ -25,6 +25,7 @@ ENV PATH="/NGStools/ReMatCh/ReMatCh/src/samtools-1.3.1/bin:/NGStools/ReMatCh/ReM
 
 # -- seq_typing --
 # TODO: remove checkout
+# TODO: remove dev tag
 RUN git clone https://github.com/B-UMMI/seq_typing.git && \
     cd seq_typing && \
     git checkout gbs_types && \
