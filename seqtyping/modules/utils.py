@@ -176,26 +176,21 @@ def script_version_git(version, current_directory, script_path, no_git_info=Fals
             os.chdir(current_directory)
 
 
-def runTime(start_time):
+def run_time(name, start_time):
     end_time = time.time()
     time_taken = end_time - start_time
     hours, rest = divmod(time_taken, 3600)
     minutes, seconds = divmod(rest, 60)
-    print('Runtime :' + str(hours) + 'h:' + str(minutes) + 'm:' + str(round(seconds, 2)) + 's')
+    print('"{name}" runtime: {h}h:{m}m:{s}s'.format(name=name, h=hours, m=minutes, s=round(seconds, 2)))
     return round(time_taken, 2)
 
 
 def timer(function, name):
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
-        print('\n' + 'RUNNING {0}\n'.format(name))
         start_time = time.time()
-
-        results = list(function(*args, **kwargs))  # guarantees return is a list to allow .insert()
-
-        time_taken = runTime(start_time)
-        print('END {0}'.format(name))
-
+        results = [function(*args, **kwargs)]  # guarantees return is a list to allow .insert()
+        time_taken = run_time(name, start_time)
         results.insert(0, time_taken)
         return results
     return wrapper
@@ -265,7 +260,7 @@ def runCommandPopenCommunicate(command, shell_True, timeout_sec_None, print_coma
         run_successfully = True
     else:
         if not print_comand_True and not_killed_by_timer:
-            print('Running: ' + str(command))
+            print('Running: {}'.format(command))
         if len(stdout) > 0:
             print('STDOUT')
             print(stdout.decode("utf-8"))
