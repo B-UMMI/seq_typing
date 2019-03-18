@@ -12,7 +12,7 @@ Within this image you can find:
 - ubuntu:16.04
 - git v2.7.4
 - Python v2.7.12 and v3.5.2
-- [Blast+](https://blast.ncbi.nlm.nih.gov/Blast.cgi) v2.8.1
+- [Blast+](https://blast.ncbi.nlm.nih.gov/Blast.cgi) v2.7.1
 - [ReMatCh](https://github.com/B-UMMI/ReMatCh) v4.0.1
 - [seq_typing](https://github.com/B-UMMI/seq_typing) v2.2
 
