@@ -15,7 +15,7 @@ RUN apt-get install -y wget git python python3 python3-pip && \
 RUN wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.7.1/ncbi-blast-2.7.1+-x64-linux.tar.gz && \
     tar -xf ncbi-blast-2.7.1+-x64-linux.tar.gz && \
     rm ncbi-blast-2.7.1+-x64-linux.tar.gz
-ENV PATH="/NGStools/ncbi-blast-2.8.1+/bin:${PATH}"
+ENV PATH="/NGStools/ncbi-blast-2.7.1+/bin:${PATH}"
 # --- ReMatCh ---
 RUN git clone https://github.com/B-UMMI/ReMatCh.git && \
     cd ReMatCh && \
