@@ -296,9 +296,4 @@ def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
     else:
         sys.exit('It was not found any Blast DB and/or the original fasta file from which the Blast DB was produced')
 
-    print('XXX', folders_2_remove)
-    print('XXX', blast_results)
-    print('XXX', blast_db_path)
-    print('XXX', headers_correspondence)
-
     return folders_2_remove, blast_results, blast_db_path, headers_correspondence

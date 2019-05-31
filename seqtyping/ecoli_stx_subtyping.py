@@ -206,7 +206,7 @@ def main():
         for folder in folders_2_remove:
             utils.removeDirectory(folder)
 
-    _ = utils.runTime(start_time)
+    _ = utils.run_time(program_name, start_time)
 
 
 if __name__ == "__main__":

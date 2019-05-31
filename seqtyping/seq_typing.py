@@ -272,10 +272,6 @@ def assembly_subcommand(args):
     for blast in args.blast:
         _, folders_2_remove, blast_results, blast, headers_correspondence = run_blast.run_blast(blast, args.outdir,
                                                                                                 args.type, args.fasta)
-        print('YYY', folders_2_remove)
-        print('YYY', blast_results)
-        print('YYY', blast)
-        print('YYY', headers_correspondence)
         folders_2_remove_all.extend(folders_2_remove)
         references_results_all[blast] = blast_results
         references_headers_all[blast] = headers_correspondence
