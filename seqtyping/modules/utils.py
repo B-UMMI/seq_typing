@@ -9,6 +9,7 @@ import functools
 import os.path
 import sys
 import argparse
+from functools import wraps as functools_wraps
 
 
 def start_logger(workdir):
@@ -176,24 +177,38 @@ def script_version_git(version, current_directory, script_path, no_git_info=Fals
             os.chdir(current_directory)
 
 
-def run_time(name, start_time):
+def time_taken_human_readable(time_taken_sec, name):
+    hours, rest = divmod(time_taken_sec, 3600)
+    minutes, seconds = divmod(rest, 60)
+    s = '"{name}" runtime: {h}h:{m}m:{s}s\n'.format(name=name, h=hours, m=minutes, s=round(seconds, 2))
+    return s
+
+
+def run_time(name, start_time, print_info=True):
     end_time = time.time()
     time_taken = end_time - start_time
-    hours, rest = divmod(time_taken, 3600)
-    minutes, seconds = divmod(rest, 60)
-    print('"{name}" runtime: {h}h:{m}m:{s}s'.format(name=name, h=hours, m=minutes, s=round(seconds, 2)))
+    if print_info:
+        print(time_taken_human_readable(time_taken_sec=time_taken, name=name))
     return round(time_taken, 2)
 
 
-def timer(function, name):
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        results = [function(*args, **kwargs)]  # guarantees return is a list to allow .insert()
-        time_taken = run_time(name, start_time)
-        results.insert(0, time_taken)
-        return results
-    return wrapper
+def timer(name, print_info=True):
+    def real_decorator(function):
+        @functools_wraps(function)
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            results = function(*args, **kwargs)
+            if isinstance(results, (list, tuple)):
+                results = list(results)
+            else:
+                results = [results]
+            time_taken = run_time(name, start_time, print_info)
+            results.insert(0, time_taken)
+            return results
+
+        return wrapper
+
+    return real_decorator
 
 
 def removeDirectory(directory):

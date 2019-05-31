@@ -227,10 +227,7 @@ def parse_blast_output(blast_output):
     return output_blast
 
 
-module_timer = partial(utils.timer, name='Module Blast')
-
-
-@module_timer
+@utils.timer('Module Blast')
 def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
     """
     Parse Blast output
@@ -298,5 +295,10 @@ def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
             sys.exit('Blast was not run successfully')
     else:
         sys.exit('It was not found any Blast DB and/or the original fasta file from which the Blast DB was produced')
+
+    print('XXX', folders_2_remove)
+    print('XXX', blast_results)
+    print('XXX', blast_db_path)
+    print('XXX', headers_correspondence)
 
     return folders_2_remove, blast_results, blast_db_path, headers_correspondence

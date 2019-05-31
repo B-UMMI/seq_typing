@@ -184,10 +184,7 @@ def run_bowtie_build(reference_file, outdir, threads=1):
     return run_successfully
 
 
-module_timer = partial(utils.timer, name='Module ReMatCh')
-
-
-@module_timer
+@utils.timer(name='Module ReMatCh')
 def run_rematch(rematch_script, outdir, references_files, fastq, threads, extraSeq, minCovPresence, minCovCall,
                 minFrequencyDominantAllele, minGeneCoverage, minGeneIdentity, debug, doNotRemoveConsensus,
                 bowtie_algorithm='--very-sensitive-local', max_number_mapped_location=1, clean_run_rematch=False,
