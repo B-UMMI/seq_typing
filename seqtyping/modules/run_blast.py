@@ -227,10 +227,7 @@ def parse_blast_output(blast_output):
     return output_blast
 
 
-module_timer = partial(utils.timer, name='Module Blast')
-
-
-@module_timer
+@utils.timer('Module Blast')
 def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
     """
     Parse Blast output

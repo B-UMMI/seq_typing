@@ -341,10 +341,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
         utils.removeDirectory(os.path.join(outdir, 'rematch', 'new_allele', ''))
 
 
-module_timer = partial(utils.timer, name='Module Parse results')
-
-
-@module_timer
+@utils.timer('Module Parse results')
 def parse_results(references_results, references_files, references_headers, outdir, min_gene_coverage,
                   min_depth_coverage, type_separator, sample='sample', save_new_allele=False, assembly=None):
     if assembly is None:

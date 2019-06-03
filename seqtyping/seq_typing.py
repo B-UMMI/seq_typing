@@ -244,7 +244,7 @@ def assembly_subcommand(args):
 
     args.fasta = os.path.abspath(args.fasta[0].name)
     if args.blast is not None:
-        args.blast = [blast.name for blast in args.blast]
+        args.blast = [os.path.abspath(blast.name) for blast in args.blast]
     else:
         args.blast, config = get_fasta_config(args.org)
         config = parse_config(config)
@@ -927,7 +927,7 @@ def main():
         for folder in folders_2_remove:
             utils.removeDirectory(folder)
 
-    _ = utils.runTime(start_time)
+    _ = utils.run_time(program_name, start_time)
 
 
 if __name__ == "__main__":

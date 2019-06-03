@@ -854,9 +854,9 @@ Example of Dengue virus serotyping and genotyping (only one reference file) usin
 
 | #sequence_type      | reference_file                 | type  | sequence                                                 | sequenced_covered | coverage_depth | sequence_identity | query                               | q_start | q_end | s_start | s_end | evalue |
 |---------------------|--------------------------------|-------|----------------------------------------------------------|-------------------|----------------|-------------------|-------------------------------------|---------|-------|---------|-------|--------|
-| selected            | 1_GenotypesDENV_14-05-18.fasta | 3-III | gb:EU529683|...|Subtype:3-III|Host:Human|seqTyping_3-III | 100.0             | 1              | 99.223            | NODE_1_length_10319_cov_2021.782660 | 138     | 10307 | 10170   | 1     | 0.0    |
-| other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 1-V   | gb:GQ868570|...|Subtype:1-V|Host:Human|seqTyping_1-V     | 100.0             | 1              | 99.479            | NODE_2_length_10199_cov_229.028848  | 13      | 10188 | 1       | 10176 | 0.0    |
-| other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 4-II  | gb:GQ868585|...|Subtype:4-II|Host:Human|seqTyping_4-II   | 100.0             | 1              | 99.38             | NODE_4_length_10182_cov_29.854132   | 13      | 10173 | 1       | 10161 | 0.0    |
+| selected            | 1_GenotypesDENV_14-05-18.fasta | 3-III | gb:EU529683#...#Subtype:3-III#Host:Human#seqTyping_3-III | 100.0             | 1              | 99.223            | NODE_1_length_10319_cov_2021.782660 | 138     | 10307 | 10170   | 1     | 0.0    |
+| other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 1-V   | gb:GQ868570#...#Subtype:1-V#Host:Human#seqTyping_1-V     | 100.0             | 1              | 99.479            | NODE_2_length_10199_cov_229.028848  | 13      | 10188 | 1       | 10176 | 0.0    |
+| other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 4-II  | gb:GQ868585#...#Subtype:4-II#Host:Human#seqTyping_4-II   | 100.0             | 1              | 99.38             | NODE_4_length_10182_cov_29.854132   | 13      | 10173 | 1       | 10161 | 0.0    |
 
 __new_allele/__  
 Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. The header of the sequence will contain the sample name (the default is "sample").  
