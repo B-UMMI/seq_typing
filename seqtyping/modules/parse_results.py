@@ -235,6 +235,10 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
 
     """
 
+    # TODO: remove code redundancy when have time (maybe never!)
+
+    found_query = False
+
     os.makedirs(os.path.join(new_allele_dir, os.path.basename(reference_file), ''))
     reader = open(assembly, mode='rt', newline=None)
     fasta_iter = (g for k, g in itertools_groupby(reader, lambda x: x.startswith('>')))
@@ -242,6 +246,7 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
         header = header.__next__()[1:].rstrip('\r\n')
         seq = ''.join(s.rstrip('\r\n') for s in fasta_iter.__next__())
         if header == query:
+            found_query = True
             if s_start > s_end:
                 starting_position = q_start - (s_length - s_start)
                 ending_position = q_end + s_end - 1
@@ -268,9 +273,46 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
             break
     reader.close()
 
+    if not found_query:
+        print('New allele found, but the Blast query name was not exactly the same as the header!\n'
+              'Trying looking for a sequence starting with the Blast query name...')
+        os.makedirs(os.path.join(new_allele_dir, os.path.basename(reference_file), ''))
+        reader = open(assembly, mode='rt', newline=None)
+        fasta_iter = (g for k, g in itertools_groupby(reader, lambda x: x.startswith('>')))
+        for header in fasta_iter:
+            header = header.__next__()[1:].rstrip('\r\n')
+            seq = ''.join(s.rstrip('\r\n') for s in fasta_iter.__next__())
+            if header.startswith(query):
+                if s_start > s_end:
+                    starting_position = q_start - (s_length - s_start)
+                    ending_position = q_end + s_end - 1
+                else:
+                    starting_position = q_start - (s_start - 1)
+                    ending_position = q_end + (s_length - s_end)
+
+                partial_seq = ''
+                if starting_position < 1:
+                    starting_position = 1
+                    partial_seq = '_partial'
+                if ending_position > q_length:
+                    ending_position = q_length
+                    partial_seq = '_partial'
+
+                seq = seq[(starting_position - 1):ending_position]
+                if s_start > s_end:
+                    seq = utils.reverse_complement(seq)
+
+                with open(os.path.join(new_allele_dir, os.path.basename(reference_file),
+                                       '{selected_type}.fasta'.format(selected_type=selected_type)), 'wt') as writer:
+                    writer.write('>{sample}{partial_seq}\n'.format(sample=sample, partial_seq=partial_seq))
+                    writer.write('\n'.join(utils.chunkstring(seq, 80)) + '\n')
+                break
+        reader.close()
+
 
 def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results, type_separator, assembly,
                   sample='sample', save_new_allele=False):
+    new_allele_found = False
     new_allele_dir = os.path.join(outdir, 'new_allele', '')
     if save_new_allele:
         utils.removeDirectory(new_allele_dir)
@@ -299,7 +341,8 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                 writer.write('\t'.join(['selected', reference, data[0].rsplit(type_separator, 1)[1]] +
                                        list(map(str, data))) + '\n')
 
-                if save_new_allele and (data[1] < 100 or data[3] < 100):
+                if save_new_allele and (data[1] < 100 and data[3] < 100):
+                    new_allele_found = True
                     if assembly is None:
                         rematch_consensus = os.path.join(outdir, 'rematch', 'new_allele',
                                                          os.path.basename(reference))
@@ -336,6 +379,9 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
             if len(data) > 0:
                 writer.write('\t'.join(['most_likely', reference, data[0].rsplit(type_separator, 1)[1]] +
                                        list(map(str, data))) + '\n')
+
+    if not new_allele_found and os.path.isdir(new_allele_dir):
+        utils.removeDirectory(new_allele_dir)
 
     if save_new_allele and assembly is None:
         utils.removeDirectory(os.path.join(outdir, 'rematch', 'new_allele', ''))
