@@ -26,8 +26,10 @@ RUN git clone https://github.com/B-UMMI/ReMatCh.git && \
 ENV PATH="/NGStools/ReMatCh/ReMatCh/src/samtools-1.3.1/bin:/NGStools/ReMatCh/ReMatCh/src/bcftools-1.3.1/bin:/NGStools/ReMatCh/ReMatCh/src/bowtie2-2.2.9:${PATH}"
 
 # -- seq_typing --
+# TODO: remove checkout
 RUN git clone https://github.com/B-UMMI/seq_typing.git && \
     cd seq_typing && \
+    git checkout gbs_types && \
     python3 setup.py install
 
 # -- Clean --
