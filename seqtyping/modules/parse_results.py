@@ -239,7 +239,10 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
 
     found_query = False
 
-    os.makedirs(os.path.join(new_allele_dir, os.path.basename(reference_file), ''))
+    new_allele_ref_dir = os.path.join(new_allele_dir, os.path.basename(reference_file), '')
+    if not os.path.isdir(new_allele_ref_dir):
+        os.makedirs(new_allele_ref_dir)
+
     reader = open(assembly, mode='rt', newline=None)
     fasta_iter = (g for k, g in itertools_groupby(reader, lambda x: x.startswith('>')))
     for header in fasta_iter:
@@ -276,7 +279,7 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
     if not found_query:
         print('New allele found, but the Blast query name was not exactly the same as the header!\n'
               'Trying looking for a sequence starting with the Blast query name...')
-        os.makedirs(os.path.join(new_allele_dir, os.path.basename(reference_file), ''))
+
         reader = open(assembly, mode='rt', newline=None)
         fasta_iter = (g for k, g in itertools_groupby(reader, lambda x: x.startswith('>')))
         for header in fasta_iter:
@@ -330,6 +333,9 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
         typeable_references = False
         for reference, data in seq_type_info.items():
             if len(data) > 0:
+                gene_coverage = data[1]
+                data[1] = round(data[1], 2)
+
                 print('\n' +
                       '\n'.join(['Reference file: {}'.format(reference),
                                  'Type: {}'.format(data[0].rsplit(type_separator, 1)[1]),
@@ -341,19 +347,24 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                 writer.write('\t'.join(['selected', reference, data[0].rsplit(type_separator, 1)[1]] +
                                        list(map(str, data))) + '\n')
 
-                if save_new_allele and (data[1] < 100 and data[3] < 100):
-                    new_allele_found = True
+                if save_new_allele:
                     if assembly is None:
-                        rematch_consensus = os.path.join(outdir, 'rematch', 'new_allele',
-                                                         os.path.basename(reference))
-                        save_new_allele_reads(sample=sample, new_allele_dir=new_allele_dir,
-                                              rematch_consensus=rematch_consensus, sequence_selected=data[0],
-                                              selected_type=data[0].rsplit(type_separator, 1)[1])
+                        if gene_coverage < 100 or data[3] < 100:
+                            new_allele_found = True
+                            rematch_consensus = os.path.join(outdir, 'rematch', 'new_allele',
+                                                             os.path.basename(reference))
+                            save_new_allele_reads(sample=sample, new_allele_dir=new_allele_dir,
+                                                  rematch_consensus=rematch_consensus, sequence_selected=data[0],
+                                                  selected_type=data[0].rsplit(type_separator, 1)[1])
                     else:
-                        save_new_allele_assembly(sample=sample, new_allele_dir=new_allele_dir, reference_file=reference,
-                                                 query=data[4], selected_type=data[0].rsplit(type_separator, 1)[1],
-                                                 assembly=assembly, q_start=data[5], q_end=data[6], q_length=data[7],
-                                                 s_start=data[8], s_end=data[9], s_length=data[10])
+                        if gene_coverage != 100 or data[3] < 100:
+                            new_allele_found = True
+                            save_new_allele_assembly(sample=sample, new_allele_dir=new_allele_dir,
+                                                     reference_file=reference, query=data[4],
+                                                     selected_type=data[0].rsplit(type_separator, 1)[1],
+                                                     assembly=assembly, q_start=data[5], q_end=data[6],
+                                                     q_length=data[7], s_start=data[8], s_end=data[9],
+                                                     s_length=data[10])
 
                 typeable_references = True
 
@@ -370,6 +381,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                       'Check seq_typing.report.other_probable_types.tab file.'.format(reference=reference) +
                       '\n')
                 for probable_type in types:
+                    probable_type[1] = round(probable_type[1], 2)
                     writer.write('\t'.join(['other_probable_type',
                                             reference,
                                             probable_type[0].rsplit(type_separator, 1)[1]] +
@@ -377,6 +389,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
 
         for reference, data in improbable_results.items():
             if len(data) > 0:
+                data[1] = round(data[1], 2)
                 writer.write('\t'.join(['most_likely', reference, data[0].rsplit(type_separator, 1)[1]] +
                                        list(map(str, data))) + '\n')
 

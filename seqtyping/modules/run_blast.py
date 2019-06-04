@@ -175,10 +175,12 @@ def parse_blast_output(blast_output):
                 if not line.startswith('#'):
                     line = line.split('\t')
 
+                    gene_coverage = int(line[9]) / float(line[3]) * 100
+
                     # By subject
                     if line[2] not in output_blast:
                         output_blast[line[2]] = {'header': line[2],
-                                                 'gene_coverage': int(line[9]) / float(line[3]) * 100,
+                                                 'gene_coverage': gene_coverage,
                                                  'gene_low_coverage': 0,
                                                  'gene_number_positions_multiple_alleles': 0,
                                                  'gene_mean_read_coverage': 1,
@@ -192,7 +194,7 @@ def parse_blast_output(blast_output):
                     else:
                         previous_blast_results = output_blast[line[2]]
                         present_blast_results = {'header': line[2],
-                                                 'gene_coverage': int(line[9]) / float(line[3] * 100),
+                                                 'gene_coverage': gene_coverage,
                                                  'gene_low_coverage': 0, 'gene_number_positions_multiple_alleles': 0,
                                                  'gene_mean_read_coverage': 1, 'gene_identity': float(line[10]),
                                                  'q_start': int(line[4]), 'q_end': int(line[5]),

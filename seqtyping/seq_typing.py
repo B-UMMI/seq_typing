@@ -922,7 +922,6 @@ def main():
                                                 args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
                                                 sample=args.sample, save_new_allele=args.saveNewAllele,
                                                 assembly=assembly)
-
     if not args.debug:
         for folder in folders_2_remove:
             utils.removeDirectory(folder)
