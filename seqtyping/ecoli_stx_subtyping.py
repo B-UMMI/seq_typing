@@ -179,7 +179,7 @@ def main():
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
                                                 args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
                                                 sample=args.sample, save_new_allele=args.saveNewAllele,
-                                                assembly=assembly)
+                                                assembly=assembly, extra_seq=args.extraSeq)
 
     stx1_result, stx2_result = stx_subtype_parser(
         os.path.join(args.outdir, 'seq_typing.report_types.tab'),

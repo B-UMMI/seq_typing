@@ -957,7 +957,7 @@ def main():
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
                                                 args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
                                                 sample=args.sample, save_new_allele=args.saveNewAllele,
-                                                assembly=assembly)
+                                                assembly=assembly, extra_seq=args.extraSeq)
     if not args.debug:
         for folder in folders_2_remove:
             utils.removeDirectory(folder)
