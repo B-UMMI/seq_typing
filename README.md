@@ -311,7 +311,7 @@ This is useful when running the same DB sequence file for different assemblies.
 usage: seq_typing.py blast [-h]
                            -t nucl
                            -f /path/to/db.sequences.fasta ... | --org escherichia coli
-                           [-o /path/to/output/directory/]
+                           [-o /path/to/output/directory/] [--extraSeq N]
 
 Creates Blast DB. This is useful when running the same DB sequence file for
 different assemblies.
@@ -335,6 +335,10 @@ General facultative options:
   -o --outdir /path/to/output/directory/
                         Path to the directory where the information will be
                         stored (default: ./)
+  --extraSeq N          Sequence length added to both ends of target sequences
+                        (usefull when analysing data by reads mapping)
+                        that will be trimmed for Blast analysis.
+                        (default when not using --org: 0)
 ```
 
 ##### _assembly_ module  
@@ -351,7 +355,7 @@ usage: seq_typing.py assembly [-h]
                               -f /path/to/query/assembly_file.fasta
                               -b /path/to/Blast/db.sequences.file ... -t nucl | --org escherichia coli
                               [-s sample-ID] [-o /path/to/output/directory/] [-j N]
-                              [--typeSeparator _] [--minGeneCoverage N]
+                              [--typeSeparator _] [--extraSeq N] [--minGeneCoverage N]
                               [--minGeneIdentity N] [--saveNewAllele]
                               [--debug] [--resume]
 
@@ -394,6 +398,9 @@ General facultative options:
   -j --threads N        Number of threads to use (default: 1)
   --typeSeparator _     Last single character separating the general sequence
                         header from the last part containing the type (default: _)
+  --extraSeq N          Sequence length added to both ends of target sequences
+                        (usefull when analysing data by reads mapping)
+                        that will be trimmed for Blast analysis.
   --minGeneCoverage N   Minimum percentage of target reference sequence
                         covered to consider a sequence to be present (value
                         between [0, 100]) (default when not using --org: 60)
@@ -689,7 +696,7 @@ usage: ecoli_stx_subtyping.py assembly [-h]
                                        -b /path/to/Blast/db.sequences.file ... -t nucl | --org stx subtyping
                                        [--stx2covered N] [--stx2identity N]
                                        [--sample sample-ID] [-o /path/to/output/directory/] [-j N]
-                                       [--typeSeparator _] [--minGeneCoverage N]
+                                       [--typeSeparator _] [--extraSeq N] [--minGeneCoverage N]
                                        [--minGeneIdentity N] [--saveNewAllele]
                                        [--debug] [--resume]
 
@@ -738,6 +745,9 @@ General facultative options:
   -j --threads N        Number of threads to use (default: 1)
   --typeSeparator _     Last single character separating the general sequence
                         header from the last part containing the type (default: _)
+  --extraSeq N          Sequence length added to both ends of target sequences
+                        (usefull when analysing data by reads mapping)
+                        that will be trimmed for Blast analysis.
   --minGeneCoverage N   Minimum percentage of target reference sequence
                         covered to consider a sequence to be present (value
                         between [0, 100]) (default: 60)
@@ -860,8 +870,10 @@ Example of Dengue virus serotyping and genotyping (only one reference file) usin
 
 __new_allele/__  
 Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. The header of the sequence will contain the sample name (the default is "sample").  
+In the case of using extra/flanking sequences to the target sequence, if the full length of such extra/flanking sequences could be retreived, a new file ending with "_.extra_seq.fasta_" will be created.
 
-Example for Dengue virus serotyping and genotyping:
+__Example__  
+For Dengue virus serotyping and genotyping:
 ```
 /outdir/
         seq_typing.report.txt
@@ -870,10 +882,12 @@ Example for Dengue virus serotyping and genotyping:
         new_allele/
                    1_GenotypesDENV_14-05-18.fasta/
                                                   3-III.fasta
-                                                  
                                                              >sample
                                                              ATGTAAGCATGAGGTCACCAT ...
-        
+                                                  3-III.extra_seq.fasta
+                                                             >sample
+                                                             CCCCCTTTTTATGTAAGCATGAGGTCACCAT ...
+
         run.20190131-162341.log
 ```
 
@@ -910,6 +924,7 @@ Example (using reads):
 
 __new_allele/__  
 Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. The header of the sequence will contain the sample name (the default is "sample").  
+In the case of using extra/flanking sequences to the target sequence, if the full length of such extra/flanking sequences could be retreived, a new file ending with "_.extra_seq.fasta_" will be created.
 
 Example:
 ```
@@ -920,10 +935,12 @@ Example:
         new_allele/
                    2_virulence_db.stx2_subtyping.fasta/
                                                        stx2c.fasta
-                                                  
                                                                   >sample
                                                                   ATGTAAGCATGAGGTCACCAT ...
-        
+                                                       stx2c.extra_seq.fasta
+                                                                  >sample
+                                                                  CCCCCTTTTTATGTAAGCATGAGGTCACCAT ...
+
         run.20190131-162341.log
 ```
 
