@@ -256,22 +256,29 @@ def assembly_subcommand(args):
         args.type = 'nucl'
         args.minGeneCoverage = config['minimum_gene_coverage']
         args.typeSeparator = '_'
+        args.extraSeq = config['length_extra_seq']
 
         print('\n'
               'Settings that will be used:\n'
               '    DB reference file: {reference}\n'
               '    Blast DB type: nucl\n'
               '    minGeneCoverage: {minGeneCoverage}\n'
-              '    Type separator character: {typeSeparator}'
-              '\n'.format(reference=args.blast, minGeneCoverage=args.minGeneCoverage, typeSeparator=args.typeSeparator))
+              '    Type separator character: {typeSeparator}\n'
+              '    extraSeq: {extraSeq}\n'
+              '\n'.format(reference=args.blast, minGeneCoverage=args.minGeneCoverage, typeSeparator=args.typeSeparator,
+                          extraSeq=args.extraSeq))
 
     folders_2_remove_all = []
     references_results_all = {}
     references_headers_all = {}
     blast_files = []
     for blast in args.blast:
-        _, folders_2_remove, blast_results, blast, headers_correspondence = run_blast.run_blast(blast, args.outdir,
-                                                                                                args.type, args.fasta)
+        _, folders_2_remove, blast_results, blast, headers_correspondence = \
+            run_blast.run_blast(blast_db_path=blast,
+                                outdir=args.outdir,
+                                blast_type=args.type,
+                                query_fasta_file=args.fasta,
+                                extra_seq=args.extraSeq)
         folders_2_remove_all.extend(folders_2_remove)
         references_results_all[blast] = blast_results
         references_headers_all[blast] = headers_correspondence
@@ -295,19 +302,22 @@ def blast_subcommand(args):
     if args.fasta is not None:
         args.fasta = [os.path.abspath(fasta.name) for fasta in args.fasta]
     else:
-        args.fasta, _ = get_fasta_config(args.org)
+        args.fasta, config = get_fasta_config(args.org)
+        config = parse_config(config)
         if args.type != 'nucl':
             print('\n'
                   'ATTENTION: Blast DB type provided was not "nucl"\n'
                   'It was changed to "nucl"'
                   '\n')
         args.type = 'nucl'
+        args.extraSeq = config['length_extra_seq']
 
         print('\n'
               'Settings that will be used:\n'
               '    fasta: {reference}\n'
               '    Blast DB type: nucl\n'
-              '\n'.format(reference=args.fasta))
+              '    extraSeq: {extraSeq}\n'
+              '\n'.format(reference=args.fasta, extraSeq=args.extraSeq))
 
     utils.removeDirectory(os.path.join(args.outdir, 'pickles', ''))
 
@@ -317,12 +327,28 @@ def blast_subcommand(args):
         blast_db = os.path.join(args.outdir, '{blast_DB}'.format(blast_DB=os.path.basename(fasta)))
         db_exists, original_file = run_blast.check_db_exists(blast_db)
         if not db_exists and not original_file:
-            db_exists = run_blast.create_blast_db(fasta, blast_db, args.type)
+            fasta_to_use = fasta
+
+            trimmed_seq_dir = os.path.join(args.outdir, 'trimmed_sequences', '')
+            if args.extraSeq > 0:
+                if not os.path.isdir(trimmed_seq_dir):
+                    os.makedirs(trimmed_seq_dir)
+                fasta_to_use = run_blast.trim_extra_sequences(
+                    in_seq_file=fasta,
+                    out_seq_file=os.path.join(
+                        trimmed_seq_dir,
+                        os.path.splitext(os.path.basename(fasta))[0] + '.trimmed_{}.fasta'.format(args.extraSeq)),
+                    extra_seq=args.extraSeq)
+
+            db_exists = run_blast.create_blast_db(fasta_to_use, blast_db, args.type)
             if db_exists:
                 print('Blast DB created for {file} in {outdir}'.format(file=fasta, outdir=args.outdir))
                 # sys.exit(0)
             else:
                 error_msg.append('It was not possible to create Blast DB or {}'.format(fasta))
+
+            utils.removeDirectory(trimmed_seq_dir)
+
         elif db_exists and original_file:
             error_msg.append('Blast DB already found for {file} in {outdir} as {blast_db}'.format(file=fasta,
                                                                                                   outdir=args.outdir,
@@ -837,6 +863,11 @@ def python_arguments(program_name, version):
                                                   help='Last single character separating the general sequence header'
                                                        ' from the last part containing the type',
                                                   required=False, default='_')
+    parser_assembly_optional_general.add_argument('--extraSeq', type=int, metavar='N',
+                                                  help='Sequence length added to both ends of target sequences (usefull'
+                                                       ' when analysing data by reads mapping) that will be trimmed for'
+                                                       ' Blast analysis (default when not using --org: 0)',
+                                                  required=False, default=0)
     parser_assembly_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N',
                                                   help='Minimum percentage of target reference sequence covered to'
                                                        ' consider a sequence to be present (value between [0, 100])'
@@ -873,6 +904,11 @@ def python_arguments(program_name, version):
     parser_blast_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
                                                help='Path to the directory where the information will be stored',
                                                required=False, default='.')
+    parser_blast_optional_general.add_argument('--extraSeq', type=int, metavar='N',
+                                               help='Sequence length added to both ends of target sequences (usefull'
+                                                    ' when analysing data by reads mapping) that will be trimmed for'
+                                                    ' Blast analysis (default when not using --org: 0)',
+                                               required=False, default=0)
 
     parser_reads.set_defaults(func=reads_subcommand)
     parser_index.set_defaults(func=index_subcommand)
