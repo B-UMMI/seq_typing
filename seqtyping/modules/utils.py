@@ -97,7 +97,7 @@ def required_programs(programs_version_dictionary):
         sys.exit('\n' + 'Errors:' + '\n' + '\n'.join(missing_programs))
 
 
-def general_information(script_name, logfile, version, outdir, time_str):
+def general_information(script_name, logfile, version):
     # Check if output directory exists
 
     print('\n' + '==========> seq_typing <==========')
@@ -456,7 +456,7 @@ def reverse(seq):
 def complement(seq):
     """Returns a complement DNA sequence"""
     complement_dict = {'A': 'T', 'C': 'G', 'T': 'A', 'G': 'C'}
-    return ''.join(list(map(lambda base: complement_dict[base], list(seq))))
+    return ''.join(list(map(lambda base: complement_dict[base.upper()], list(seq))))
 
 
 def reverse_complement(seq):
