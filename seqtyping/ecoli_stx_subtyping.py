@@ -159,8 +159,7 @@ def main():
     # Start logger
     logfile, time_str = utils.start_logger(args.outdir)
 
-    _ = utils.general_information(script_name=program_name, logfile=logfile, version=__version__,
-                                  outdir=args.outdir, time_str=time_str)
+    _ = utils.general_information(script_name=program_name, logfile=logfile, version=__version__)
     print('\n')
 
     folders_2_remove = []

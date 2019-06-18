@@ -936,8 +936,7 @@ def main():
     # Start logger
     logfile, time_str = utils.start_logger(args.outdir)
 
-    script_path = utils.general_information(script_name=program_name, logfile=logfile, version=__version__,
-                                            outdir=args.outdir, time_str=time_str)
+    script_path = utils.general_information(script_name=program_name, logfile=logfile, version=__version__)
     del script_path
     print('\n')
 
