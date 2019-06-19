@@ -138,8 +138,8 @@ def main():
     msg = []
     if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
         msg.append('--minGeneCoverage should be a value between [0, 100]')
-    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
-        msg.append('--minGeneIdentity should be a value between [0, 100]')
+    # if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
+    #     msg.append('--minGeneIdentity should be a value between [0, 100]')
     if args.stx2covered < 0 or args.stx2covered > 100:
         msg.append('--stx2covered should be a value between [0, 100]')
     if args.stx2identity < 0 or args.stx2identity > 100:
@@ -174,11 +174,13 @@ def main():
     folders_2_remove_func, references_results, reference, references_headers, assembly = args.func(args)
     folders_2_remove.extend(folders_2_remove_func)
 
+    min_identity = args.minGeneIdentity if args.minGeneIdentity is not None else 0
+
     # Parse results
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
                                                 args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
                                                 sample=args.sample, save_new_allele=args.saveNewAllele,
-                                                assembly=assembly, extra_seq=args.extraSeq)
+                                                assembly=assembly, extra_seq=args.extraSeq, min_identity=min_identity)
 
     stx1_result, stx2_result = stx_subtype_parser(
         os.path.join(args.outdir, 'seq_typing.report_types.tab'),

@@ -41,8 +41,8 @@ Determines which reference sequence is more likely to be present in a given samp
 </html>
 
 **seq_typing** is a software to determine a given sample type using either a read mapping approach or a sequence Blast search against a set of reference sequences.  
-For the read mapping approach, the sample's reads are mapped to the given reference sequences using [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml), parsed with [Samtools](http://www.htslib.org/) and analysed via [ReMatCh](https://github.com/B-UMMI/ReMatCh). Based on the length of the sequence covered and it's depth of coverage, **seq_typing** returns the type associated with the reference sequence which is more likely to be present. The selected sequence will be the one covered to a greater extent and with higher depth of coverage, that passes defined thresholds.  
-For the Blast approach (when using sequences fasta files) the sequence selected, for each DB sequence, the best Blast hit is retrieved. The best hit is defined by the largest alignment length, highest similarity, and lowest E-value and number of gaps (applied hierarchically following the order here described).  
+For the read mapping approach, the sample's reads are mapped to the given reference sequences using [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml), parsed with [Samtools](http://www.htslib.org/) and analysed via [ReMatCh](https://github.com/B-UMMI/ReMatCh). Based on the length of the sequence covered and it's depth of coverage, **seq_typing** returns the type associated with the reference sequence which is more likely to be present. The selected sequence will be the one covered to a greater extent, with higher depth of coverage and with the highest identity (applied hierarchically following the order here described), that passes defined thresholds.  
+For the Blast approach (when using sequences fasta files) the sequence selected, for each DB sequence, is determined accordingly with the best Blast hit. The best hit is defined by the largest alignment length, highest similarity, lowest E-value and number of gaps, and largest reference sequence length (applied hierarchically following the order here described). The selected sequence criteria is the same used with the read mapping approach (although the depth of coverage will always be 1).  
 In both cases, manual curation and sequence type definition is required for reference sequences database production.
 
 ## Input requirements
@@ -274,7 +274,7 @@ General facultative options:
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
                         between [0, 100]). One INDEL will be considered as one
-                        difference (default: 80)
+                        difference
   --bowtieAlgo="--very-sensitive-local"
                         Bowtie2 alignment mode. It can be an end-to-end
                         alignment (unclipped alignment) or local alignment
@@ -406,7 +406,7 @@ General facultative options:
                         between [0, 100]) (default when not using --org: 60)
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
-                        between [0, 100]) (default: 80)
+                        between [0, 100])
   --saveNewAllele       Save the new allele found for the selected type
                         (default: false)
   --debug               Debug mode: do not remove temporary files
@@ -658,7 +658,7 @@ General facultative options:
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
                         between [0, 100]). One INDEL will be considered as one
-                        difference (default: 80)
+                        difference
   --bowtieAlgo="--very-sensitive-local"
                         Bowtie2 alignment mode. It can be an end-to-end
                         alignment (unclipped alignment) or local alignment
@@ -753,7 +753,7 @@ General facultative options:
                         between [0, 100]) (default: 60)
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
-                        between [0, 100]) (default: 80)
+                        between [0, 100])
   --saveNewAllele       Save the new allele found for the selected type
                         (default: false)
   --debug               Debug mode: do not remove temporary files

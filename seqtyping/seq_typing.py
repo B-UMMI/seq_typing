@@ -231,7 +231,7 @@ def assembly_subcommand(args):
         msg.append('With --blast option you must provide the --type')
     if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
         msg.append('--minGeneCoverage should be a value between [0, 100]')
-    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
+    if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
         msg.append('--minGeneIdentity should be a value between [0, 100]')
 
     if len(msg) > 0:
@@ -428,13 +428,18 @@ def write_seq_from_sequence_dict(sequence_dict, out_fasta_file):
 
 
 def reads_subcommand(args):
+
     msg = []
     # if args.reference is None and args.org is None:
     #     argparse.ArgumentParser.error('--reference or --org must be provided')
     if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
         msg.append('--minGeneCoverage should be a value between [0, 100]')
-    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
-        msg.append('--minGeneIdentity should be a value between [0, 100]')
+    if args.minGeneIdentity is None:
+        min_gene_identity = 80
+    else:
+        min_gene_identity = args.minGeneIdentity
+        if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
+            msg.append('--minGeneIdentity should be a value between [0, 100]')
 
     if len(msg) > 0:
         argparse.ArgumentParser(prog='assembly subcommand options').error('\n'.join(msg))
@@ -595,7 +600,7 @@ def reads_subcommand(args):
                                                                     args.fastq, args.threads, args.extraSeq,
                                                                     args.minCovPresence, args.minCovCall,
                                                                     args.minFrequencyDominantAllele,
-                                                                    args.minGeneCoverage, args.minGeneIdentity,
+                                                                    args.minGeneCoverage, min_gene_identity,
                                                                     args.debug, args.doNotRemoveConsensus,
                                                                     bowtie_algorithm=args.bowtieAlgo,
                                                                     max_number_mapped_location=args.maxNumMapLoc,
@@ -780,7 +785,7 @@ def python_arguments(program_name, version):
                                                help='Minimum percentage of identity of reference sequence covered to'
                                                     ' consider a gene to be present (value between [0, 100]). One INDEL'
                                                     ' will be considered as one difference',
-                                               required=False, default=80)
+                                               required=False)
     parser_reads_optional_general.add_argument('--bowtieAlgo', type=str, metavar='"--very-sensitive-local"',
                                                help='Bowtie2 alignment mode. It can be an end-to-end alignment'
                                                     ' (unclipped alignment) or local alignment (soft clipped'
@@ -876,7 +881,7 @@ def python_arguments(program_name, version):
     parser_assembly_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
                                                   help='Minimum percentage of identity of reference sequence covered'
                                                        ' to consider a gene to be present (value between [0, 100])',
-                                                  required=False, default=80)
+                                                  required=False)
     parser_assembly_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N', help=argparse.SUPPRESS,
                                                   required=False, default=1)
     parser_assembly_optional_general.add_argument('--saveNewAllele', action='store_true',
@@ -936,8 +941,7 @@ def main():
     # Start logger
     logfile, time_str = utils.start_logger(args.outdir)
 
-    script_path = utils.general_information(script_name=program_name, logfile=logfile, version=__version__)
-    del script_path
+    _ = utils.general_information(script_name=program_name, logfile=logfile, version=__version__)
     print('\n')
 
     folders_2_remove = []
@@ -952,11 +956,13 @@ def main():
     folders_2_remove_func, references_results, reference, references_headers, assembly = args.func(args)
     folders_2_remove.extend(folders_2_remove_func)
 
+    min_identity = args.minGeneIdentity if args.minGeneIdentity is not None else 0
+
     # Parse results
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
                                                 args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
                                                 sample=args.sample, save_new_allele=args.saveNewAllele,
-                                                assembly=assembly, extra_seq=args.extraSeq)
+                                                assembly=assembly, extra_seq=args.extraSeq, min_identity=min_identity)
     if not args.debug:
         for folder in folders_2_remove:
             utils.removeDirectory(folder)

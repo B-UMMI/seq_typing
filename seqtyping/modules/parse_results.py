@@ -8,33 +8,57 @@ except ImportError:
     from seqtyping.modules import utils as utils
 
 
-extra_blast_fields = ['query', 'q_start', 'q_end', 'q_length', 's_start', 's_end', 's_length', 'evalue']
+extra_blast_fields = ['query', 'q_start', 'q_end', 'q_length', 's_start', 's_end', 's_length', 'evalue', 'gaps']
 
 
-def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage):
+def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_identity=0):
     sequence = {}
     probable_sequences = {}
     improbable_sequences = {}
 
+    high_seq_cov = 0
+    high_seq_depth = 0
+    high_seq_ident = 0
+
     fields = ['gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for gene, rematch_results in data_by_gene.items():
-        if rematch_results['gene_mean_read_coverage'] < min_depth_coverage:
-            improbable_sequences[rematch_results['gene_coverage']] = gene
+        sequenced_covered = rematch_results['gene_coverage']
+        seq_cov_ceil = sequenced_covered if sequenced_covered <= 100 else 100
+
+        coverage_depth = rematch_results['gene_mean_read_coverage']
+        sequence_identity = rematch_results['gene_identity']
+
+        if sequenced_covered < min_gene_coverage:
+            improbable_sequences[sequenced_covered] = gene
         else:
-            if rematch_results['gene_coverage'] >= min_gene_coverage:
-                if rematch_results['gene_coverage'] not in sequence:
-                    sequence[rematch_results['gene_coverage']] = gene
+            if coverage_depth < min_depth_coverage:
+                improbable_sequences[sequenced_covered] = gene
+            else:
+                if sequence_identity < min_identity:
+                    improbable_sequences[sequenced_covered] = gene
                 else:
-                    if data_by_gene[sequence[rematch_results['gene_coverage']]]['gene_mean_read_coverage'] < \
-                            rematch_results['gene_mean_read_coverage']:
-                        probable_sequences[sequence[rematch_results['gene_coverage']]] = \
-                            [rematch_results['gene_coverage']] + \
-                            [data_by_gene[sequence[rematch_results['gene_coverage']]][field] for field in fields[1:]]
-                        sequence[rematch_results['gene_coverage']] = gene
+                    if seq_cov_ceil > high_seq_cov:
+                        high_seq_cov = seq_cov_ceil
+                        high_seq_depth = coverage_depth
+                        high_seq_ident = sequence_identity
+                    elif seq_cov_ceil == high_seq_cov:
+                        if coverage_depth > high_seq_depth:
+                            high_seq_depth = coverage_depth
+                            high_seq_ident = sequence_identity
+                        elif coverage_depth == high_seq_depth:
+                            if sequence_identity > high_seq_ident:
+                                high_seq_ident = sequence_identity
+
+                    if seq_cov_ceil == high_seq_cov and \
+                        coverage_depth == high_seq_depth and \
+                            sequence_identity == high_seq_ident:
+                        if len(sequence) > 0:
+                            probable_sequences[next(iter(sequence.values()))] = \
+                                [data_by_gene[next(iter(sequence.values()))][field] for field in fields]
+                            sequence = {}
+                        sequence[sequenced_covered] = gene
                     else:
                         probable_sequences[gene] = [rematch_results[field] for field in fields]
-            else:
-                improbable_sequences[rematch_results['gene_coverage']] = gene
 
     if len(sequence) == 1:
         sequence = next(iter(sequence.values()))  # Get the first one
@@ -54,10 +78,11 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage):
 
 
 def get_results(references_results, min_gene_coverage, min_depth_coverage, type_separator, references_files,
-                references_headers):
+                references_headers, min_identity=0):
     intermediate_results = {}
     for reference, data_by_gene in references_results.items():
-        intermediate_results[reference] = get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage)
+        intermediate_results[reference] = get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage,
+                                                            min_identity=min_identity)
 
     results = {}
     results_info = {}
@@ -128,7 +153,7 @@ def add_empty_blast_info(data_dict):
     -------
     data_dict : dict
         Return the input dictionary already with ['query', 'q_start', 'q_end', 'q_length', 's_start', 's_end',
-        's_length', 'evalue'] fields as 'NA'
+        's_length', 'evalue', 'gaps'] fields as 'NA'
     """
     for field in extra_blast_fields:
         data_dict[field] = 'NA'
@@ -438,7 +463,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
 @utils.timer('Module Parse results')
 def parse_results(references_results, references_files, references_headers, outdir, min_gene_coverage,
                   min_depth_coverage, type_separator, sample='sample', save_new_allele=False, assembly=None,
-                  extra_seq=0):
+                  extra_seq=0, min_identity=0):
     if assembly is None:
         print('Parsing reads results')
         references_results = split_references_results_by_references(references_results, references_headers)
@@ -449,7 +474,8 @@ def parse_results(references_results, references_files, references_headers, outd
                                                                                 min_gene_coverage,
                                                                                 min_depth_coverage, type_separator,
                                                                                 references_files,
-                                                                                references_headers)
+                                                                                references_headers,
+                                                                                min_identity=min_identity)
     write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results, type_separator, assembly,
                   sample=sample, save_new_allele=save_new_allele, extra_seq=extra_seq)
 
