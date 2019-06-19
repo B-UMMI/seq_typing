@@ -854,7 +854,7 @@ Tabular file with detailed results:
 Example of _E. coli_ serotyping (two reference files) using reads:  
 
 | #sequence_type      | reference_file | type | sequence              | sequenced_covered | coverage_depth     | sequence_identity | query | q_start | q_end | s_start | s_end | evalue | gaps |
-|---------------------|----------------|------|-----------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|
+|---------------------|----------------|------|-----------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|------| 
 | selected            | O_type.fasta   | O26  | wzy_192_AF529080_O26  | 100.0             | 281.95405669599216 | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
 | selected            | H_type.fasta   | H11  | fliC_269_AY337465_H11 | 99.4546693933197  | 51.76490747087046  | 99.86291980808772 | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
 | other_probable_type | O_type.fasta   | O26  | wzx_208_AF529080_O26  | 100.0             | 223.3072050673001  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
@@ -863,7 +863,7 @@ Example of _E. coli_ serotyping (two reference files) using reads:
 Example of Dengue virus serotyping and genotyping (only one reference file) using assembly:  
 
 | #sequence_type      | reference_file                 | type  | sequence                                                 | sequenced_covered | coverage_depth | sequence_identity | query                               | q_start | q_end | s_start | s_end | evalue | gaps |
-|---------------------|--------------------------------|-------|----------------------------------------------------------|-------------------|----------------|-------------------|-------------------------------------|---------|-------|---------|-------|--------|
+|---------------------|--------------------------------|-------|----------------------------------------------------------|-------------------|----------------|-------------------|-------------------------------------|---------|-------|---------|-------|--------|------|
 | selected            | 1_GenotypesDENV_14-05-18.fasta | 3-III | gb:EU529683#...#Subtype:3-III#Host:Human#seqTyping_3-III | 100.0             | 1              | 99.223            | NODE_1_length_10319_cov_2021.782660 | 138     | 10307 | 10170   | 1     | 0.0    | 0    |
 | other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 1-V   | gb:GQ868570#...#Subtype:1-V#Host:Human#seqTyping_1-V     | 100.0             | 1              | 99.479            | NODE_2_length_10199_cov_229.028848  | 13      | 10188 | 1       | 10176 | 0.0    | 0    |
 | other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 4-II  | gb:GQ868585#...#Subtype:4-II#Host:Human#seqTyping_4-II   | 100.0             | 1              | 99.38             | NODE_4_length_10182_cov_29.854132   | 13      | 10173 | 1       | 10161 | 0.0    | 3    |
@@ -914,7 +914,7 @@ Tabular file with detailed results similar to the above _seq_typing.report_types
 Example (using reads):  
 
 | #sequence_type      | reference_file                      | type  | sequence                            | sequenced_covered | coverage_depth     | sequence_identity | query | q_start | q_end | s_start | s_end | evalue | gaps |
-|---------------------|-------------------------------------|-------|-------------------------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|
+|---------------------|-------------------------------------|-------|-------------------------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|------|
 | selected            | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1A:15:AF461168:A:seqTyping_stx1a | 100.0             | 65.37447257383967  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
 | selected            | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:15:AB071845:C:seqTyping_stx2c | 100.0             | 19.377777777777776 | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
 | other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1c | stx1B:11:AB071620:C:seqTyping_stx1c | 100.0             | 21.64814814814815  | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
