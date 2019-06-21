@@ -215,7 +215,7 @@ usage: seq_typing.py reads [-h]
                            [--minCovCall N] [--minGeneCoverage N]
                            [--minDepthCoverage N] [--minGeneIdentity N]
                            [--bowtieAlgo="--very-sensitive-local"] [--maxNumMapLoc N]
-                           [--doNotRemoveConsensus] [--saveNewAllele]
+                           [--doNotRemoveConsensus] [--saveNewAllele] [--typeNotInNew]
                            [--debug] [--resume]
 
 Run seq_typing.py using fastq files. If running multiple samples using the
@@ -292,6 +292,9 @@ General facultative options:
                         (default when not using --org: 1)
   --saveNewAllele       Save the new allele found for the selected type
                         (default: false)
+  --typeNotInNew        Do not save the type of the selected sequence in the header
+                        of the new allele (when writing uses the "--typeSeparator").
+                        (default: false)
   --doNotRemoveConsensus
                         Do not remove ReMatCh consensus sequences
   --debug               Debug mode: do not remove temporary files
@@ -356,7 +359,7 @@ usage: seq_typing.py assembly [-h]
                               -b /path/to/Blast/db.sequences.file ... -t nucl | --org escherichia coli
                               [-s sample-ID] [-o /path/to/output/directory/] [-j N]
                               [--typeSeparator _] [--extraSeq N] [--minGeneCoverage N]
-                              [--minGeneIdentity N] [--saveNewAllele]
+                              [--minGeneIdentity N] [--saveNewAllele] [--typeNotInNew]
                               [--debug] [--resume]
 
 Run seq_typing.py using a fasta file. If running multiple samples using the
@@ -408,6 +411,9 @@ General facultative options:
                         covered to consider a gene to be present (value
                         between [0, 100])
   --saveNewAllele       Save the new allele found for the selected type
+                        (default: false)
+  --typeNotInNew        Do not save the type of the selected sequence in the header
+                        of the new allele (when writing uses the "--typeSeparator").
                         (default: false)
   --debug               Debug mode: do not remove temporary files
   --resume              Resume seq_typing.py assembly
@@ -607,7 +613,7 @@ usage: ecoli_stx_subtyping.py reads [-h]
                                     [--minCovCall N] [--minGeneCoverage N]
                                     [--minDepthCoverage N] [--minGeneIdentity N]
                                     [--bowtieAlgo="--very-sensitive-local"] [--maxNumMapLoc N]
-                                    [--doNotRemoveConsensus] [--saveNewAllele]
+                                    [--doNotRemoveConsensus] [--saveNewAllele] [--typeNotInNew]
                                     [--debug] [--resume]
 
 Run ecoli_stx_subtyping.py using fastq files
@@ -676,6 +682,9 @@ General facultative options:
                         (default when not using --org: 1)
   --saveNewAllele       Save the new allele found for the selected type
                         (default: false)
+  --typeNotInNew        Do not save the type of the selected sequence in the header
+                        of the new allele (when writing uses the "--typeSeparator").
+                        (default: false)
   --doNotRemoveConsensus
                         Do not remove ReMatCh consensus sequences
   --debug               Debug mode: do not remove temporary files
@@ -697,7 +706,7 @@ usage: ecoli_stx_subtyping.py assembly [-h]
                                        [--stx2covered N] [--stx2identity N]
                                        [--sample sample-ID] [-o /path/to/output/directory/] [-j N]
                                        [--typeSeparator _] [--extraSeq N] [--minGeneCoverage N]
-                                       [--minGeneIdentity N] [--saveNewAllele]
+                                       [--minGeneIdentity N] [--saveNewAllele] [--typeNotInNew]
                                        [--debug] [--resume]
 
 Run ecoli_stx_subtyping.py using a fasta file. If running multiple samples using the
@@ -755,6 +764,9 @@ General facultative options:
                         covered to consider a gene to be present (value
                         between [0, 100])
   --saveNewAllele       Save the new allele found for the selected type
+                        (default: false)
+  --typeNotInNew        Do not save the type of the selected sequence in the header
+                        of the new allele (when writing uses the "--typeSeparator").
                         (default: false)
   --debug               Debug mode: do not remove temporary files
   --resume              Resume seq_typing.py reads
@@ -869,8 +881,8 @@ Example of Dengue virus serotyping and genotyping (only one reference file) usin
 | other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 4-II  | gb:GQ868585#...#Subtype:4-II#Host:Human#seqTyping_4-II   | 100.0             | 1              | 99.38             | NODE_4_length_10182_cov_29.854132   | 13      | 10173 | 1       | 10161 | 0.0    | 3    |
 
 __new_allele/__  
-Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. The header of the sequence will contain the sample name (the default is "sample").  
-In the case of using extra/flanking sequences to the target sequence, if the full length of such extra/flanking sequences could be retreived, a new file ending with "_.extra_seq.fasta_" will be created.
+Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. If it is not possible to retreive the entire sequence of the new allele, "\_partial" string will be added to the header. The header of the sequence will contain the sample name (the default is "sample") and the selected type separated by the `--typeSeparator` option (this behaviour can be deactivated with the `--typeNotInNew` option).  
+In the case of using extra/flanking sequences to the target sequence, if the full length of such extra/flanking sequences could be retreived, a new file ending with "_.extra_seq.fasta_" will be created (not yet implemented for reads).
 
 __Example__  
 For Dengue virus serotyping and genotyping:
@@ -882,10 +894,10 @@ For Dengue virus serotyping and genotyping:
         new_allele/
                    1_GenotypesDENV_14-05-18.fasta/
                                                   3-III.fasta
-                                                             >sample
+                                                             >sample_partial_3-III
                                                              ATGTAAGCATGAGGTCACCAT ...
                                                   3-III.extra_seq.fasta
-                                                             >sample
+                                                             >sample_partial_3-III
                                                              CCCCCTTTTTATGTAAGCATGAGGTCACCAT ...
 
         run.20190131-162341.log
@@ -923,8 +935,8 @@ Example (using reads):
 | other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2d | stx2B:11:FM998840:D:seqTyping_stx2d | 100.0             | 9.996296296296297  | 99.62962962962963 | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
 
 __new_allele/__  
-Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. The header of the sequence will contain the sample name (the default is "sample").  
-In the case of using extra/flanking sequences to the target sequence, if the full length of such extra/flanking sequences could be retreived, a new file ending with "_.extra_seq.fasta_" will be created.
+Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. If it is not possible to retreive the entire sequence of the new allele, "\_partial" string will be added to the header. The header of the sequence will contain the sample name (the default is "sample") and the selected type separated by the `--typeSeparator` option (this behaviour can be deactivated with the `--typeNotInNew` option).  
+In the case of using extra/flanking sequences to the target sequence, if the full length of such extra/flanking sequences could be retreived, a new file ending with "_.extra_seq.fasta_" will be created (not yet implemented for reads).
 
 Example:
 ```
@@ -935,10 +947,14 @@ Example:
         new_allele/
                    2_virulence_db.stx2_subtyping.fasta/
                                                        stx2c.fasta
-                                                                  >sample
+                                                                  >sample_stx2c
                                                                   ATGTAAGCATGAGGTCACCAT ...
                                                        stx2c.extra_seq.fasta
-                                                                  >sample
+                                                                  >sample_stx2c
+                                                                  CCCCCTTTTTATGTAAGCATGAGGTCACCAT ...
+                   1_virulence_db.stx1_subtyping.fasta/
+                                                       stx1a.extra_seq.fasta
+                                                                  >sample_partial
                                                                   CCCCCTTTTTATGTAAGCATGAGGTCACCAT ...
 
         run.20190131-162341.log

@@ -180,7 +180,8 @@ def split_references_results_by_references(references_results, references_header
     return organized_references_results
 
 
-def save_new_allele_reads(sample, new_allele_dir, rematch_consensus, sequence_selected, selected_type):
+def save_new_allele_reads(sample, new_allele_dir, rematch_consensus, sequence_selected, selected_type,
+                          type_in_new=True, type_separator='_'):
     """
     Save the new allele found using reads in a reference file folder, under the file name of the selected type and with
     sample's name as header
@@ -197,6 +198,10 @@ def save_new_allele_reads(sample, new_allele_dir, rematch_consensus, sequence_se
         Header of the selected sequence
     selected_type : str
         Type from the selected sequence
+    type_in_new : bool
+        Sets if the type of the selected sequence should be stored in the header of the new allele
+    type_separator : str
+        Character that will be used to separate the regular part of the new allele header and the type to be included
 
     Returns
     -------
@@ -215,15 +220,19 @@ def save_new_allele_reads(sample, new_allele_dir, rematch_consensus, sequence_se
                             seq += line.rstrip('\r\n')
                         else:
                             break
+
+                    type_str = '{s}{t}'.format(s=type_separator, t=selected_type) if type_in_new else ''
                     with open(os.path.join(new_allele_dir, reference_file,
-                                           '{selected_type}.fasta'.format(selected_type=selected_type)), 'wt') as writer:
-                        writer.write('>{}\n'.format(sample))
+                                           '{selected_type}.fasta'.format(selected_type=selected_type)),
+                              'wt') as writer:
+                        writer.write('>{s}{t}\n'.format(s=sample, t=type_str))
                         writer.write('\n'.join(utils.chunkstring(seq, 80)) + '\n')
                     break
 
 
 def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, selected_type, assembly,
-                             q_start, q_end, q_length, s_start, s_end, s_length, extra_seq=0):
+                             q_start, q_end, q_length, s_start, s_end, s_length, extra_seq=0, type_in_new=True,
+                             type_separator='_'):
     """
     Save the new allele found using the assembly in a reference file folder, under the file name of the selected type
     and with sample's name as header
@@ -256,6 +265,10 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
         Subject length
     extra_seq : int
         Sequence length to be added to both ends of target sequences
+    type_in_new : bool
+        Sets if the type of the selected sequence should be stored in the header of the new allele
+    type_separator : str
+        Character that will be used to separate the regular part of the new allele header and the type to be included
 
     Returns
     -------
@@ -269,6 +282,8 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
     new_allele_ref_dir = os.path.join(new_allele_dir, os.path.basename(reference_file), '')
     if not os.path.isdir(new_allele_ref_dir):
         os.makedirs(new_allele_ref_dir)
+
+    type_str = '{s}{t}'.format(s=type_separator, t=selected_type) if type_in_new else ''
 
     reader = open(assembly, mode='rt', newline=None)
     fasta_iter = (g for k, g in itertools_groupby(reader, lambda x: x.startswith('>')))
@@ -299,7 +314,7 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
 
             with open(os.path.join(new_allele_dir, os.path.basename(reference_file),
                                    '{selected_type}.fasta'.format(selected_type=selected_type)), 'wt') as writer:
-                writer.write('>{sample}{partial_seq}\n'.format(sample=sample, partial_seq=partial_seq))
+                writer.write('>{s}{p}{t}\n'.format(s=sample, p=partial_seq, t=type_str))
                 writer.write('\n'.join(utils.chunkstring(seq_to_save, 80)) + '\n')
 
             if extra_seq > 0:
@@ -315,7 +330,7 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
                     with open(os.path.join(new_allele_dir, os.path.basename(reference_file),
                                            '{selected_type}.extra_seq.fasta'.format(selected_type=selected_type)),
                               'wt') as writer:
-                        writer.write('>{sample}{partial_seq}\n'.format(sample=sample, partial_seq=partial_seq))
+                        writer.write('>{s}{p}{t}\n'.format(s=sample, p=partial_seq, t=type_str))
                         writer.write('\n'.join(utils.chunkstring(seq_to_save, 80)) + '\n')
             break
     reader.close()
@@ -351,7 +366,7 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
 
                 with open(os.path.join(new_allele_dir, os.path.basename(reference_file),
                                        '{selected_type}.fasta'.format(selected_type=selected_type)), 'wt') as writer:
-                    writer.write('>{sample}{partial_seq}\n'.format(sample=sample, partial_seq=partial_seq))
+                    writer.write('>{s}{p}{t}\n'.format(s=sample, p=partial_seq, t=type_str))
                     writer.write('\n'.join(utils.chunkstring(seq_to_save, 80)) + '\n')
 
                 if extra_seq > 0:
@@ -367,14 +382,14 @@ def save_new_allele_assembly(sample, new_allele_dir, reference_file, query, sele
                         with open(os.path.join(new_allele_dir, os.path.basename(reference_file),
                                                '{selected_type}.extra_seq.fasta'.format(selected_type=selected_type)),
                                   'wt') as writer:
-                            writer.write('>{sample}{partial_seq}\n'.format(sample=sample, partial_seq=partial_seq))
+                            writer.write('>{s}{p}{t}\n'.format(s=sample, p=partial_seq, t=type_str))
                             writer.write('\n'.join(utils.chunkstring(seq_to_save, 80)) + '\n')
                 break
         reader.close()
 
 
 def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results, type_separator, assembly,
-                  sample='sample', save_new_allele=False, extra_seq=0):
+                  sample='sample', save_new_allele=False, extra_seq=0, type_in_new=True):
     new_allele_found = False
     new_allele_dir = os.path.join(outdir, 'new_allele', '')
     if save_new_allele:
@@ -415,7 +430,8 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                                                              os.path.basename(reference))
                             save_new_allele_reads(sample=sample, new_allele_dir=new_allele_dir,
                                                   rematch_consensus=rematch_consensus, sequence_selected=data[0],
-                                                  selected_type=data[0].rsplit(type_separator, 1)[1])
+                                                  selected_type=data[0].rsplit(type_separator, 1)[1],
+                                                  type_in_new=type_in_new, type_separator=type_separator)
                     else:
                         if gene_coverage != 100 or data[3] < 100:
                             new_allele_found = True
@@ -424,7 +440,8 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                                                      selected_type=data[0].rsplit(type_separator, 1)[1],
                                                      assembly=assembly, q_start=data[5], q_end=data[6],
                                                      q_length=data[7], s_start=data[8], s_end=data[9],
-                                                     s_length=data[10], extra_seq=extra_seq)
+                                                     s_length=data[10], extra_seq=extra_seq,
+                                                     type_in_new=type_in_new, type_separator=type_separator)
 
                 typeable_references = True
 
@@ -463,7 +480,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
 @utils.timer('Module Parse results')
 def parse_results(references_results, references_files, references_headers, outdir, min_gene_coverage,
                   min_depth_coverage, type_separator, sample='sample', save_new_allele=False, assembly=None,
-                  extra_seq=0, min_identity=0):
+                  extra_seq=0, min_identity=0, type_in_new=True):
     if assembly is None:
         print('Parsing reads results')
         references_results = split_references_results_by_references(references_results, references_headers)
@@ -477,6 +494,6 @@ def parse_results(references_results, references_files, references_headers, outd
                                                                                 references_headers,
                                                                                 min_identity=min_identity)
     write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_results, type_separator, assembly,
-                  sample=sample, save_new_allele=save_new_allele, extra_seq=extra_seq)
+                  sample=sample, save_new_allele=save_new_allele, extra_seq=extra_seq, type_in_new=type_in_new)
 
     return seq_type, seq_type_info, probable_results, improbable_results

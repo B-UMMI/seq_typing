@@ -175,12 +175,14 @@ def main():
     folders_2_remove.extend(folders_2_remove_func)
 
     min_identity = args.minGeneIdentity if args.minGeneIdentity is not None else 0
+    type_in_new = not args.typeNotInNew
 
     # Parse results
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
                                                 args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
                                                 sample=args.sample, save_new_allele=args.saveNewAllele,
-                                                assembly=assembly, extra_seq=args.extraSeq, min_identity=min_identity)
+                                                assembly=assembly, extra_seq=args.extraSeq, min_identity=min_identity,
+                                                type_in_new=type_in_new)
 
     stx1_result, stx2_result = stx_subtype_parser(
         os.path.join(args.outdir, 'seq_typing.report_types.tab'),

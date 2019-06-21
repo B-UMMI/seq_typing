@@ -806,6 +806,9 @@ def python_arguments(program_name, version):
                                                help='Do not remove ReMatCh consensus sequences')
     parser_reads_optional_general.add_argument('--saveNewAllele', action='store_true',
                                                help='Save the new allele found for the selected type')
+    parser_reads_optional_general.add_argument('--typeNotInNew', action='store_true',
+                                               help='Do not save the type of the selected sequence in the header of the'
+                                                    ' new allele (when writing uses the "--typeSeparator")')
     parser_reads_optional_general.add_argument('--debug', action='store_true',
                                                help='Debug mode: do not remove temporary files')
     parser_reads_optional_general.add_argument('--resume', action='store_true',
@@ -886,6 +889,9 @@ def python_arguments(program_name, version):
                                                   required=False, default=1)
     parser_assembly_optional_general.add_argument('--saveNewAllele', action='store_true',
                                                   help='Save the new allele found for the selected type')
+    parser_assembly_optional_general.add_argument('--typeNotInNew', action='store_true',
+                                                  help='Do not save the type of the selected sequence in the header of'
+                                                       ' the new allele (when writing uses the "--typeSeparator").')
     parser_assembly_optional_general.add_argument('--debug', action='store_true',
                                                   help='Debug mode: do not remove temporary files')
     parser_assembly_optional_general.add_argument('--resume', action='store_true', help=argparse.SUPPRESS)
@@ -957,12 +963,14 @@ def main():
     folders_2_remove.extend(folders_2_remove_func)
 
     min_identity = args.minGeneIdentity if args.minGeneIdentity is not None else 0
+    type_in_new = not args.typeNotInNew
 
     # Parse results
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
                                                 args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
                                                 sample=args.sample, save_new_allele=args.saveNewAllele,
-                                                assembly=assembly, extra_seq=args.extraSeq, min_identity=min_identity)
+                                                assembly=assembly, extra_seq=args.extraSeq, min_identity=min_identity,
+                                                type_in_new=type_in_new)
     if not args.debug:
         for folder in folders_2_remove:
             utils.removeDirectory(folder)
