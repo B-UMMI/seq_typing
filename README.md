@@ -429,6 +429,7 @@ General facultative options:
 For the following organisms, references sequences are provided.
 * **Serotyping**:
   * _Escherichia coli_
+  * _Staph agr_ (_Staphylococcus aureus_, agr typing)
   * _Haemophilus influenzae_
   * _GBS sero_ (Group B Streptococcus, _Streptococcus agalactiae_, serotype)
   * _Dengue virus_ (with genotype information)
