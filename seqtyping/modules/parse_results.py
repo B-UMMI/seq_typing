@@ -1,5 +1,4 @@
 import os.path
-from functools import partial
 from itertools import groupby as itertools_groupby
 
 try:
@@ -23,7 +22,16 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
     fields = ['gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for gene, rematch_results in data_by_gene.items():
         sequenced_covered = rematch_results['gene_coverage']
-        seq_cov_ceil = sequenced_covered if sequenced_covered <= 100 else 100
+
+        if rematch_results['s_length'] != 'NA':
+            if rematch_results['gaps'] != 'NA':
+                gaps_ponderation = rematch_results['gaps'] / rematch_results['s_length'] * 100
+            else:
+                gaps_ponderation = 0
+        else:
+            gaps_ponderation = 0
+
+        seq_cov_ceil = sequenced_covered - gaps_ponderation
 
         coverage_depth = rematch_results['gene_mean_read_coverage']
         sequence_identity = rematch_results['gene_identity']
