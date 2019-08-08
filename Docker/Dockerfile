@@ -19,10 +19,8 @@ RUN wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.7.1/ncbi-blast-2.
 ENV PATH="/NGStools/ncbi-blast-2.7.1+/bin:${PATH}"
 
 # --- ReMatCh ---
-# TODO: remove checkout
 RUN git clone https://github.com/B-UMMI/ReMatCh.git && \
     cd ReMatCh && \
-    git checkout dev && \
     python3 setup.py install && \
     cd /NGStools
 ENV PATH="/NGStools/ReMatCh/ReMatCh/src/samtools-1.3.1/bin:/NGStools/ReMatCh/ReMatCh/src/bcftools-1.3.1/bin:/NGStools/ReMatCh/ReMatCh/src/bowtie2-2.2.9:${PATH}"

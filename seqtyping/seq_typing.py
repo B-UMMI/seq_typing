@@ -141,7 +141,7 @@ def include_rematch_dependencies_path():
     resource_rematch = None
     try:
         resource_rematch = resource_filename('ReMatCh', 'rematch.py')
-    except ImportError:
+    except (ModuleNotFoundError, ImportError):
         resource_rematch = original_rematch
     else:
         print('\n'
