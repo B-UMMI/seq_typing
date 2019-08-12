@@ -171,17 +171,23 @@ def main():
     folders_2_remove.append(pickles_folder)
 
     # Run functions
-    folders_2_remove_func, references_results, reference, references_headers, assembly = args.func(args)
+    folders_2_remove_func, references_results, reference, references_headers, assembly, args_config_dict = \
+        args.func(args)
     folders_2_remove.extend(folders_2_remove_func)
 
-    min_identity = args.minGeneIdentity if args.minGeneIdentity is not None else 0
+    min_gene_identity = args_config_dict['minimum_gene_identity']
+    min_gene_coverage = args_config_dict['minimum_gene_coverage']
+    type_separator = args_config_dict['type_separator']
+    length_extra_seq = args_config_dict['length_extra_seq']
+
     type_in_new = not args.typeNotInNew
 
     # Parse results
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
-                                                args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
+                                                min_gene_coverage, args.minDepthCoverage, type_separator,
                                                 sample=args.sample, save_new_allele=args.saveNewAllele,
-                                                assembly=assembly, extra_seq=args.extraSeq, min_identity=min_identity,
+                                                assembly=assembly, extra_seq=length_extra_seq,
+                                                min_identity=min_gene_identity,
                                                 type_in_new=type_in_new)
 
     stx1_result, stx2_result = stx_subtype_parser(

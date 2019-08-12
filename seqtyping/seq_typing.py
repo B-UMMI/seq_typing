@@ -50,7 +50,8 @@ except ImportError:
 
 def parse_config(config_file):
     config = {'length_extra_seq': None, 'minimum_depth_presence': None, 'minimum_depth_call': None,
-              'minimum_gene_coverage': None, 'bowtie_algorithm': None, 'maximum_number_mapped_locations': None}
+              'minimum_gene_coverage': None, 'bowtie_algorithm': None, 'maximum_number_mapped_locations': None,
+              'minimum_gene_identity': None}
 
     with open(config_file, 'rtU') as reader:
         field = None
@@ -65,10 +66,9 @@ def parse_config(config_file):
                     if field is not None:
                         if field in list(config.keys()):
                             line = int(line) if field != 'bowtie_algorithm' else line
-                            if field == 'minimum_gene_coverage':
+                            if field in ('minimum_gene_coverage', 'minimum_gene_identity'):
                                 if line < 0 or line > 100:
-                                    sys.exit('minimum_gene_coverage in config file must be an integer between 0 and'
-                                             ' 100')
+                                    sys.exit('{} in config file must be an integer between 0 and 100'.format(field))
                         config[field] = line
                         field = None
 
@@ -231,7 +231,7 @@ def assembly_subcommand(args):
         msg.append('With --blast option you must provide the --type')
     if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
         msg.append('--minGeneCoverage should be a value between [0, 100]')
-    if args.minGeneIdentity is not None and (args.minGeneIdentity < 0 or args.minGeneIdentity > 100):
+    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
         msg.append('--minGeneIdentity should be a value between [0, 100]')
 
     if len(msg) > 0:
@@ -255,6 +255,7 @@ def assembly_subcommand(args):
                   '\n')
         args.type = 'nucl'
         args.minGeneCoverage = config['minimum_gene_coverage']
+        args.minGeneIdentity = config['minimum_gene_identity']
         args.typeSeparator = '_'
         args.extraSeq = config['length_extra_seq']
 
@@ -263,10 +264,11 @@ def assembly_subcommand(args):
               '    DB reference file: {reference}\n'
               '    Blast DB type: nucl\n'
               '    minGeneCoverage: {minGeneCoverage}\n'
+              '    minGeneIdentity: {minGeneIdentity}\n'
               '    Type separator character: {typeSeparator}\n'
               '    extraSeq: {extraSeq}\n'
               '\n'.format(reference=args.blast, minGeneCoverage=args.minGeneCoverage, typeSeparator=args.typeSeparator,
-                          extraSeq=args.extraSeq))
+                          extraSeq=args.extraSeq, minGeneIdentity=args.minGeneIdentity))
 
     folders_2_remove_all = []
     references_results_all = {}
@@ -284,7 +286,18 @@ def assembly_subcommand(args):
         references_headers_all[blast] = headers_correspondence
         blast_files.append(blast)
 
-    return folders_2_remove_all, references_results_all, blast_files, references_headers_all, args.fasta
+    args_config_dict = {'length_extra_seq': args.extraSeq,
+                        'minimum_depth_presence': None,
+                        'minimum_depth_call': None,
+                        'minimum_gene_coverage': args.minGeneCoverage,
+                        'minimum_gene_identity': args.minGeneIdentity,
+                        'bowtie_algorithm': None,
+                        'maximum_number_mapped_locations': None,
+                        'type_separator': args.typeSeparator,
+                        'type': args.type}
+
+    return (folders_2_remove_all, references_results_all, blast_files, references_headers_all, args.fasta,
+            args_config_dict)
 
 
 def blast_subcommand(args):
@@ -434,15 +447,13 @@ def reads_subcommand(args):
     #     argparse.ArgumentParser.error('--reference or --org must be provided')
     if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
         msg.append('--minGeneCoverage should be a value between [0, 100]')
-    if args.minGeneIdentity is None:
-        min_gene_identity = 80
-    else:
-        min_gene_identity = args.minGeneIdentity
-        if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
-            msg.append('--minGeneIdentity should be a value between [0, 100]')
+    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
+        msg.append('--minGeneIdentity should be a value between [0, 100]')
 
     if len(msg) > 0:
         argparse.ArgumentParser(prog='assembly subcommand options').error('\n'.join(msg))
+
+    min_gene_identity = args.minGeneIdentity
 
     rematch_script = include_rematch_dependencies_path()
 
@@ -570,6 +581,7 @@ def reads_subcommand(args):
         args.minCovPresence = config['minimum_depth_presence']
         args.minCovCall = config['minimum_depth_call']
         args.minGeneCoverage = config['minimum_gene_coverage']
+        args.minGeneIdentity = config['minimum_gene_identity']
         args.bowtieAlgo = config['bowtie_algorithm']
         args.maxNumMapLoc = config['maximum_number_mapped_locations']
         args.typeSeparator = '_'
@@ -581,12 +593,14 @@ def reads_subcommand(args):
               '    minCovPresence: {minCovPresence}\n'
               '    minCovCall: {minCovCall}\n'
               '    minGeneCoverage: {minGeneCoverage}\n'
+              '    minGeneIdentity: {minGeneIdentity}\n'
               '    bowtieAlgo: {bowtieAlgo}\n'
               '    maxNumMapLoc: {maxNumMapLoc}\n'
               '    Type separator character: {typeSeparator}'
               '\n'.format(reference=args.reference, extraSeq=args.extraSeq, minCovPresence=args.minCovPresence,
                           minCovCall=args.minCovCall, minGeneCoverage=args.minGeneCoverage, bowtieAlgo=args.bowtieAlgo,
-                          maxNumMapLoc=args.maxNumMapLoc, typeSeparator=args.typeSeparator))
+                          maxNumMapLoc=args.maxNumMapLoc, typeSeparator=args.typeSeparator,
+                          minGeneIdentity=args.minGeneIdentity))
 
     pickles_folder = os.path.join(args.outdir, 'pickles', '')
 
@@ -611,7 +625,17 @@ def reads_subcommand(args):
     if not args.doNotRemoveConsensus:
         folders_2_remove.append(module_dir)
 
-    return folders_2_remove, references_results, args.reference, references_headers, None
+    args_config_dict = {'length_extra_seq': args.extraSeq,
+                        'minimum_depth_presence': args.minCovPresence,
+                        'minimum_depth_call': args.minCovCall,
+                        'minimum_gene_coverage': args.minGeneCoverage,
+                        'minimum_gene_identity': args.minGeneIdentity,
+                        'bowtie_algorithm': args.bowtieAlgo,
+                        'maximum_number_mapped_locations': args.maxNumMapLoc,
+                        'type_separator': args.typeSeparator,
+                        'type': None}
+
+    return folders_2_remove, references_results, args.reference, references_headers, None, args_config_dict
 
 
 def index_subcommand(args):
@@ -784,8 +808,9 @@ def python_arguments(program_name, version):
     parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
                                                help='Minimum percentage of identity of reference sequence covered to'
                                                     ' consider a gene to be present (value between [0, 100]). One INDEL'
-                                                    ' will be considered as one difference',
-                                               required=False)
+                                                    ' will be considered as one difference'
+                                                    ' (default when not using --org: 80)',
+                                               required=False, default=80)
     parser_reads_optional_general.add_argument('--bowtieAlgo', type=str, metavar='"--very-sensitive-local"',
                                                help='Bowtie2 alignment mode. It can be an end-to-end alignment'
                                                     ' (unclipped alignment) or local alignment (soft clipped'
@@ -883,8 +908,9 @@ def python_arguments(program_name, version):
                                                   required=False, default=60)
     parser_assembly_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
                                                   help='Minimum percentage of identity of reference sequence covered'
-                                                       ' to consider a gene to be present (value between [0, 100])',
-                                                  required=False)
+                                                       ' to consider a gene to be present (value between [0, 100])'
+                                                       ' (default when not using --org: 0)',
+                                                  required=False, default=0)
     parser_assembly_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N', help=argparse.SUPPRESS,
                                                   required=False, default=1)
     parser_assembly_optional_general.add_argument('--saveNewAllele', action='store_true',
@@ -959,17 +985,23 @@ def main():
     folders_2_remove.append(pickles_folder)
 
     # Run functions
-    folders_2_remove_func, references_results, reference, references_headers, assembly = args.func(args)
+    folders_2_remove_func, references_results, reference, references_headers, assembly, args_config_dict = \
+        args.func(args)
     folders_2_remove.extend(folders_2_remove_func)
 
-    min_identity = args.minGeneIdentity if args.minGeneIdentity is not None else 0
+    min_gene_identity = args_config_dict['minimum_gene_identity']
+    min_gene_coverage = args_config_dict['minimum_gene_coverage']
+    type_separator = args_config_dict['type_separator']
+    length_extra_seq = args_config_dict['length_extra_seq']
+
     type_in_new = not args.typeNotInNew
 
     # Parse results
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
-                                                args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator,
+                                                min_gene_coverage, args.minDepthCoverage, type_separator,
                                                 sample=args.sample, save_new_allele=args.saveNewAllele,
-                                                assembly=assembly, extra_seq=args.extraSeq, min_identity=min_identity,
+                                                assembly=assembly, extra_seq=length_extra_seq,
+                                                min_identity=min_gene_identity,
                                                 type_in_new=type_in_new)
     if not args.debug:
         for folder in folders_2_remove:
