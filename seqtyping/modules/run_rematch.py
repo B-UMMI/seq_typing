@@ -65,6 +65,9 @@ def get_sequence_information(fasta_file):
             sys.exit('Found duplicated sequence'
                      ' headers: {original_header}'.format(original_header=original_header))
         seq = ''.join(s.rstrip('\r\n') for s in fasta_iter.__next__())
+        if '>' in seq:
+            raise ValueError('A > character was found between the sequence of {}'.format(original_header))
+
         sequence_counter += 1
         sequence_dict[sequence_counter] = {'header': new_header, 'sequence': seq, 'length': len(seq)}
         headers[new_header] = str(original_header)

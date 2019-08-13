@@ -138,15 +138,14 @@ def include_rematch_dependencies_path():
     if run_successfully:
         original_rematch = stdout.splitlines()[0]
 
-    resource_rematch = None
     try:
         resource_rematch = resource_filename('ReMatCh', 'rematch.py')
-    except (ModuleNotFoundError, ImportError):
+    except ImportError:
         resource_rematch = original_rematch
-    else:
-        print('\n'
-              'Using ReMatCh "{resource_rematch}" via "{original_rematch}"\n'.format(resource_rematch=resource_rematch,
-                                                                                     original_rematch=original_rematch))
+
+    print('\n'
+          'Using ReMatCh "{resource_rematch}" via "{original_rematch}"\n'.format(resource_rematch=resource_rematch,
+                                                                                 original_rematch=original_rematch))
 
     if resource_rematch is not None:
         utils.setPATHvariable(False, resource_rematch)

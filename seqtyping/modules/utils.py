@@ -442,6 +442,8 @@ def parse_reference(reference, problematic_characters):
                     headers_correspondence[header] = str(original_header)
                     sequence = ''
                 else:
+                    if '>' in line:
+                        raise ValueError('A > character was found between the sequence of {}'.format(header))
                     sequence += line.replace(' ', '').upper()
         if len(sequence) > 0:
             reference_dict[header] = sequence
