@@ -457,7 +457,7 @@ def reverse(seq):
 
 def complement(seq):
     """Returns a complement DNA sequence"""
-    complement_dict = {'A': 'T', 'C': 'G', 'T': 'A', 'G': 'C'}
+    complement_dict = {'A': 'T', 'C': 'G', 'T': 'A', 'G': 'C', 'N': 'N'}
     return ''.join(list(map(lambda base: complement_dict[base.upper()], list(seq))))
 
 
