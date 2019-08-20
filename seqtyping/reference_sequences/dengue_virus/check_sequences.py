@@ -65,6 +65,8 @@ def main():
     with_gap = 0
 
     seq_by_serotype = {}
+    seq_no_genotype_by_serotype = {}
+    seq_only_genotype_by_serotype = {}
     seq_with_different_length = []
 
     for seq in SeqIO.parse(fasta_file, 'fasta'):
@@ -82,6 +84,8 @@ def main():
 
             if serotype not in seq_by_serotype:
                 seq_by_serotype[serotype] = []
+                seq_no_genotype_by_serotype[serotype] = []
+                seq_only_genotype_by_serotype[serotype] = []
 
             if not set(seq.seq.upper()).issubset(set('-')):
                 seq = SeqRecord(Seq.Seq(str(seq.seq).replace('-', ''), generic_dna),
@@ -106,6 +110,11 @@ def main():
                             seq_with_different_length.append(serotype)
                     else:
                         seq_by_serotype[serotype].append(seq)
+
+                    if genotype is None:
+                        seq_no_genotype_by_serotype[serotype].append(seq)
+                    else:
+                        seq_only_genotype_by_serotype[serotype].append(seq)
                 else:
                     sequences['impossible_iupac_code'].append(seq)
             else:
@@ -126,6 +135,11 @@ def main():
                     else:
                         seq_by_serotype[serotype].append(seq)
 
+                    if genotype is None:
+                        seq_no_genotype_by_serotype[serotype].append(seq)
+                    else:
+                        seq_only_genotype_by_serotype[serotype].append(seq)
+
     print('gap', with_gap)
     for type_seq, seqs in sequences.items():
         print(type_seq, len(seqs))
@@ -137,6 +151,12 @@ def main():
     for serotype in seq_by_serotype:
         with open(fasta_file + '.no_gap_iupac.{sero}.fasta'.format(sero=serotype), 'wt', newline='\n') as writer:
             _ = SeqIO.write(seq_by_serotype[serotype], writer, 'fasta')
+        with open(fasta_file + '.no_gap_iupac.no_genotype.{sero}.fasta'.format(sero=serotype),
+                  'wt', newline='\n') as writer:
+            _ = SeqIO.write(seq_no_genotype_by_serotype[serotype], writer, 'fasta')
+        with open(fasta_file + '.no_gap_iupac.only_genotype.{sero}.fasta'.format(sero=serotype),
+                  'wt', newline='\n') as writer:
+            _ = SeqIO.write(seq_only_genotype_by_serotype[serotype], writer, 'fasta')
 
     if len(seq_with_different_length) > 0:
         print('WARNING: sequences with different lengths in the following serotypes:')

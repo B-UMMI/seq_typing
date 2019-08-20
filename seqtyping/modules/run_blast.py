@@ -1,6 +1,7 @@
 import os.path
 import sys
 from functools import partial
+from itertools import groupby as itertools_groupby
 
 try:
     import modules.utils as utils
@@ -38,6 +39,26 @@ def check_db_exists(db_path):
     if counter > 0:
         db_exists = True
     return db_exists, original_file
+
+
+def trim_extra_sequences(in_seq_file, out_seq_file, extra_seq):
+    in_seq_file = os.path.abspath(in_seq_file)
+    out_seq_file = os.path.abspath(out_seq_file)
+
+    with open(out_seq_file, mode='wt', newline='\n') as writer:
+        with open(in_seq_file, mode='rt', newline=None) as reader:
+            fasta_iter = (g for k, g in itertools_groupby(reader, lambda x: x.startswith('>')))
+            for header in fasta_iter:
+                header = header.__next__()[1:].rstrip('\r\n')
+                seq = ''.join(s.rstrip('\r\n') for s in fasta_iter.__next__())
+                seq = seq[extra_seq: - extra_seq]
+                if len(seq) == 0:
+                    raise ValueError('The following sequence ended up with no sequence after trimming the extra'
+                                     ' sequences: {h} (in {f} file)'.format(h=header, f=in_seq_file))
+                writer.write('>{}\n'.format(header))
+                writer.write('\n'.join(utils.chunkstring(seq, 80)) + '\n')
+
+    return out_seq_file
 
 
 def create_blast_db(db_sequences, db_output, db_type):
@@ -129,8 +150,9 @@ def run_blast_command(query_file, blast_db, db_type, blast_output, threads=1):
     if not os.path.isdir(os.path.dirname(blast_output)):
         os.makedirs(os.path.dirname(blast_output))
 
+    # Remove culling_limit
     command = ['', '-query', query_file, '-db', blast_db, '-out', blast_output, '-outfmt', '', '-dust', 'no',
-               '-culling_limit', '1', '-num_threads', str(threads)]
+               '-num_threads', str(threads)]
 
     if db_type == 'nucl':
         command[0] = 'blastn -task blastn'
@@ -174,29 +196,33 @@ def parse_blast_output(blast_output):
                 if not line.startswith('#'):
                     line = line.split('\t')
 
+                    gene_coverage = int(line[9]) / float(line[3]) * 100
+
                     # By subject
                     if line[2] not in output_blast:
                         output_blast[line[2]] = {'header': line[2],
-                                                 'gene_coverage': int(line[9]) / float(line[3]) * 100,
+                                                 'gene_coverage': gene_coverage,
                                                  'gene_low_coverage': 0,
                                                  'gene_number_positions_multiple_alleles': 0,
                                                  'gene_mean_read_coverage': 1,
                                                  'gene_identity': float(line[10]),
-                                                 'q_start': int(line[4]),
-                                                 'q_end': int(line[5]), 's_start': int(line[6]),
-                                                 's_end': int(line[7]), 'evalue': float(line[8]),
-                                                 'gaps': int(line[13]), 'query': line[0],
+                                                 'q_start': int(line[4]), 'q_end': int(line[5]),
+                                                 'q_length': int(line[1]),
+                                                 's_start': int(line[6]), 's_end': int(line[7]),
+                                                 's_length': int(line[3]),
+                                                 'evalue': float(line[8]), 'gaps': int(line[13]), 'query': line[0],
                                                  'alignment_length': int(line[9]), 'subject_length': int(line[3])}
                     else:
                         previous_blast_results = output_blast[line[2]]
                         present_blast_results = {'header': line[2],
-                                                 'gene_coverage': int(line[9]) / float(line[3] * 100),
+                                                 'gene_coverage': gene_coverage,
                                                  'gene_low_coverage': 0, 'gene_number_positions_multiple_alleles': 0,
                                                  'gene_mean_read_coverage': 1, 'gene_identity': float(line[10]),
                                                  'q_start': int(line[4]), 'q_end': int(line[5]),
+                                                 'q_length': int(line[1]),
                                                  's_start': int(line[6]), 's_end': int(line[7]),
-                                                 'evalue': float(line[8]),
-                                                 'gaps': int(line[13]), 'query': line[0],
+                                                 's_length': int(line[3]),
+                                                 'evalue': float(line[8]), 'gaps': int(line[13]), 'query': line[0],
                                                  'alignment_length': int(line[9]), 'subject_length': int(line[3])}
 
                         to_change = False
@@ -215,8 +241,12 @@ def parse_blast_output(blast_output):
                                 if previous_blast_results['evalue'] > float(line[8]):
                                     to_change = True
                                 elif previous_blast_results['evalue'] == float(line[8]) and \
-                                        previous_blast_results['gaps'] > int(line[13]):
-                                    to_change = True
+                                        previous_blast_results['gaps'] >= int(line[13]):
+                                    if previous_blast_results['gaps'] > int(line[13]):
+                                        to_change = True
+                                    elif previous_blast_results['gaps'] == int(line[3]) and \
+                                            previous_blast_results['s_length'] < int(line[3]):
+                                        to_change = True
 
                         if to_change:
                             output_blast[line[2]] = present_blast_results
@@ -224,11 +254,8 @@ def parse_blast_output(blast_output):
     return output_blast
 
 
-module_timer = partial(utils.timer, name='Module Blast')
-
-
-@module_timer
-def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
+@utils.timer('Module Blast')
+def run_blast(blast_db_path, outdir, blast_type, query_fasta_file, extra_seq=0):
     """
     Parse Blast output
 
@@ -243,6 +270,8 @@ def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
         Blast DB type. Can only be 'nucl' or 'prot'
     query_fasta_file : str
         Path to fasta file containing the query sequences, e.g. /input/queries.fasta
+    extra_seq : int
+        Sequence length added to both ends of target sequences that will trimmed for the analysis
 
     Returns
     -------
@@ -263,13 +292,30 @@ def run_blast(blast_db_path, outdir, blast_type, query_fasta_file):
     # Check Blast DB
     db_exists, original_file = check_db_exists(blast_db_path)
     if not db_exists:
-        blast_db = os.path.join(outdir, 'blast_db', '{blast_DB}'.format(blast_DB=os.path.basename(blast_db_path)))
+        blast_db_prefix = os.path.basename(blast_db_path)
+
+        trimmed_seq_dir = os.path.join(outdir, 'trimmed_sequences')
+        folders_2_remove.append(trimmed_seq_dir)
+
+        if extra_seq > 0:
+            if not os.path.isdir(trimmed_seq_dir):
+                os.makedirs(trimmed_seq_dir)
+
+            blast_db_prefix = \
+                os.path.splitext(blast_db_prefix)[0] + '.trimmed_{}.fasta'.format(extra_seq)
+
+        blast_db = os.path.join(outdir, 'blast_db', '{blast_DB}'.format(blast_DB=blast_db_prefix))
         folders_2_remove.append(os.path.dirname(blast_db))
 
         if not os.path.isdir(os.path.dirname(blast_db)):
             os.makedirs(os.path.dirname(blast_db))
 
-        db_exists = create_blast_db(blast_db_path, blast_db, blast_type)
+        if extra_seq > 0:
+            blast_db_path = trim_extra_sequences(in_seq_file=blast_db_path,
+                                                 out_seq_file=os.path.join(trimmed_seq_dir, blast_db_prefix),
+                                                 extra_seq=extra_seq)
+
+        db_exists = create_blast_db(db_sequences=blast_db_path, db_output=blast_db, db_type=blast_type)
         if db_exists:
             blast_db_path = str(blast_db)
             original_file = True
