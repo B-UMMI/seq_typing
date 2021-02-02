@@ -11,13 +11,9 @@ ENV PATH="/opt/conda/bin:${PATH}"
 
 # -- seq_typing Dependencies ---
 
-USER anaconda
-
 WORKDIR /NGStools/
 
-RUN ls -l /
-RUN ls -l /NGStools/
-RUN whoami
+USER root
 
 # --- Blast+ ---
 RUN wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.7.1/ncbi-blast-2.7.1+-x64-linux.tar.gz && \
