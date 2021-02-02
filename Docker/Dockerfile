@@ -4,13 +4,17 @@ LABEL version="2.3-dev-2021"
 # -- General Dependencies ---
 
 RUN /opt/conda/bin/conda install -y git && \
-    /opt/conda/bin/pip install setuptools
+    /opt/conda/bin/pip install setuptools && \
+    /opt/conda/bin/conda clean -y --all
 
 ENV PATH="/opt/conda/bin:${PATH}"
 
 # -- seq_typing Dependencies ---
 
+USER anaconda
+
 WORKDIR /NGStools/
+
 RUN ls -l /
 RUN ls -l /NGStools/
 RUN whoami
@@ -36,12 +40,6 @@ RUN git clone https://github.com/B-UMMI/seq_typing.git && \
     git checkout gbs_types && \
     python3 setup.py install
 
-# -- Finishing --
-
-RUN conda clean -y --all
-
 ENV PATH="/NGStools/ReMatCh/ReMatCh/src/samtools-1.3.1/bin:/NGStools/ReMatCh/ReMatCh/src/bcftools-1.3.1/bin:/NGStools/ReMatCh/ReMatCh/src/bowtie2-2.2.9:/NGStools/ncbi-blast-2.7.1+/bin:${PATH}"
-
-# SHELL ["/opt/conda/bin/sh", "-c"]
 
 WORKDIR /data/
