@@ -1,5 +1,5 @@
 FROM continuumio/miniconda3:4.8.2-alpine
-LABEL version="2.3-dev-2021"
+LABEL version="2.3-dev-2021-02"
 
 # -- Dependencies ---
 
