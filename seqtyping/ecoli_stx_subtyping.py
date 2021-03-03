@@ -144,7 +144,7 @@ def main():
         msg.append('--stx2covered should be a value between [0, 100]')
     if args.stx2identity < 0 or args.stx2identity > 100:
         msg.append('--stx2identity should be a value between [0, 100]')
-    if args.org != ['stx', 'subtyping']:
+    if args.blast is None and args.org != ['stx', 'subtyping']:
         msg.append('Use "--org stx subtyping" with {}'.format(program_name))
 
     if len(msg) > 0:
