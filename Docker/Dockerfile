@@ -1,9 +1,9 @@
 FROM continuumio/miniconda3:4.8.2-alpine
-LABEL version="2.3-dev-2021-02"
+LABEL version="2.3-dev-2021-03"
 
 # -- Dependencies ---
 
-RUN /opt/conda/bin/conda install -y -c bioconda git blast=2.10.1 && \
+RUN /opt/conda/bin/conda install -y -c bioconda blast=2.10.1 && \
     /opt/conda/bin/pip install setuptools && \
     /opt/conda/bin/conda clean -y --all
 
@@ -14,6 +14,8 @@ ENV PATH="/opt/conda/bin:${PATH}"
 WORKDIR /NGStools/
 
 USER root
+
+RUN apk add bash git libstdc++
 
 # --- ReMatCh ---
 # TODO: remove checkout
