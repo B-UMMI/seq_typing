@@ -450,7 +450,7 @@ def reads_subcommand(args):
         msg.append('--minGeneIdentity should be a value between [0, 100]')
 
     if len(msg) > 0:
-        argparse.ArgumentParser(prog='assembly subcommand options').error('\n'.join(msg))
+        argparse.ArgumentParser(prog='reads subcommand options').error('\n'.join(msg))
 
     min_gene_identity = args.minGeneIdentity
 
@@ -475,14 +475,21 @@ def reads_subcommand(args):
 
         clean_run_rematch = False
 
-        args.reference = [os.path.abspath(reference) for reference in args.reference]
+        args.reference = [os.path.abspath(reference.name) for reference in args.reference]
 
         reference_files = {}
 
         for reference in args.reference:
             fasta_file, index_files, pickle_file = check_reference_exist(reference)
+            
             if not fasta_file and len(index_files) == 0 and not pickle_file:
-                sys.exit('Missing reference fasta file, Bowtie2 index of pickle file for {}'.format(reference))
+                raise FileNotFoundError('Missing reference fasta file, Bowtie2 index of pickle file for {}'.format(reference))
+            
+            print('\n'
+                'Using pre-computed index:\n'
+                '{}'
+                '\n'.format('\n'.join(index_files)))
+
             reference_files[reference] = fasta_file, index_files, pickle_file
 
         references_to_use = []
@@ -741,7 +748,7 @@ def python_arguments(program_name, version):
                                        required=True)
 
     parser_reads_reference = parser_reads.add_mutually_exclusive_group(required=True)
-    parser_reads_reference.add_argument('-r', '--reference', nargs='+', type=str,
+    parser_reads_reference.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'),
                                         metavar='/path/to/reference/sequences.file',
                                         help='Path to reference sequences files. If Bowtie2 index was already produced,'
                                              ' only provide the file name that ends with ".1.bt2", but without this'
@@ -839,7 +846,7 @@ def python_arguments(program_name, version):
                                                help='Resume %(prog)s')
 
     parser_index_reference = parser_index.add_mutually_exclusive_group(required=True)
-    parser_index_reference.add_argument('-r', '--reference', nargs='+', type=str,
+    parser_index_reference.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'),
                                         metavar='/path/to/reference/sequences.fasta',
                                         help='Path to reference sequences files. If more than one file is passed, a'
                                              ' Bowtie2 index for each file will be created.')
