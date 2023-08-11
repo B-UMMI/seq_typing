@@ -167,7 +167,7 @@ def main():
     #     for subtype, seqs in subtype_dict.items():
     #         print(subtype, len(seqs))
 
-    _ = utils.runTime(start_time)
+    _ = utils.run_time('get_stx_db.py', start_time)
 
 
 if __name__ == "__main__":

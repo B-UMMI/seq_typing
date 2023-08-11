@@ -30,17 +30,19 @@ import time
 import argparse
 
 try:
+    from __init__ import __version__
+
     import modules.utils as utils
     import modules.parse_results as parse_results
 
     from seq_typing import python_arguments as python_arguments
 except ImportError:
+    from seqtyping.__init__ import __version__
+
     from seqtyping.modules import utils as utils
     from seqtyping.modules import parse_results as parse_results
 
     from seqtyping.seq_typing import python_arguments
-
-version = '1.0'
 
 
 def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, stx2_alternative_sequenced_covered,
@@ -105,30 +107,30 @@ def main():
     if sys.version_info[0] < 3:
         sys.exit('Must be using Python 3. Try calling "python3 {}"'.format(program_name))
 
-    parser, parser_reads, _, parser_assembly, _ = python_arguments(program_name=program_name, version=version)
+    parser, parser_reads, _, parser_assembly, _ = python_arguments(program_name=program_name, version=__version__)
     parser.description = 'Gets E. coli stx subtypes'
 
     # Add specific arguments
     parser_reads.add_argument('--stx2covered', type=float,
                               metavar='N',
                               help='Minimal percentage of sequence covered to consider extra stx2'
-                                   ' subtypes (value between [0, 100]) (default: 100)',
+                                   ' subtypes (value between [0, 100])',
                               required=False, default=100)
     parser_reads.add_argument('--stx2identity', type=float,
                               metavar='N',
                               help='Minimal sequence identity to consider extra stx2'
-                                   ' subtypes (value between [0, 100]) (default: 99.5)',
+                                   ' subtypes (value between [0, 100])',
                               required=False, default=99.5)
 
     parser_assembly.add_argument('--stx2covered', type=float,
                                  metavar='N',
                                  help='Minimal percentage of sequence covered to consider extra stx2'
-                                      ' subtypes (value between [0, 100]) (default: 100)',
+                                      ' subtypes (value between [0, 100])',
                                  required=False, default=100)
     parser_assembly.add_argument('--stx2identity', type=float,
                                  metavar='N',
                                  help='Minimal sequence identity to consider extra stx2'
-                                      ' subtypes (value between [0, 100]) (default: 99.5)',
+                                      ' subtypes (value between [0, 100])',
                                  required=False, default=99.5)
 
     args = parser.parse_args()
@@ -136,13 +138,13 @@ def main():
     msg = []
     if args.minGeneCoverage < 0 or args.minGeneCoverage > 100:
         msg.append('--minGeneCoverage should be a value between [0, 100]')
-    if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
-        msg.append('--minGeneIdentity should be a value between [0, 100]')
+    # if args.minGeneIdentity < 0 or args.minGeneIdentity > 100:
+    #     msg.append('--minGeneIdentity should be a value between [0, 100]')
     if args.stx2covered < 0 or args.stx2covered > 100:
         msg.append('--stx2covered should be a value between [0, 100]')
     if args.stx2identity < 0 or args.stx2identity > 100:
         msg.append('--stx2identity should be a value between [0, 100]')
-    if args.org != ['stx', 'subtyping']:
+    if args.blast is None and args.org != ['stx', 'subtyping']:
         msg.append('Use "--org stx subtyping" with {}'.format(program_name))
 
     if len(msg) > 0:
@@ -157,8 +159,7 @@ def main():
     # Start logger
     logfile, time_str = utils.start_logger(args.outdir)
 
-    _ = utils.general_information(script_name=program_name, logfile=logfile, version=version,
-                                  outdir=args.outdir, time_str=time_str)
+    _ = utils.general_information(script_name=program_name, logfile=logfile, version=__version__)
     print('\n')
 
     folders_2_remove = []
@@ -170,12 +171,24 @@ def main():
     folders_2_remove.append(pickles_folder)
 
     # Run functions
-    folders_2_remove_func, references_results, reference, references_headers = args.func(args)
+    folders_2_remove_func, references_results, reference, references_headers, assembly, args_config_dict = \
+        args.func(args)
     folders_2_remove.extend(folders_2_remove_func)
+
+    min_gene_identity = args_config_dict['minimum_gene_identity']
+    min_gene_coverage = args_config_dict['minimum_gene_coverage']
+    type_separator = args_config_dict['type_separator']
+    length_extra_seq = args_config_dict['length_extra_seq']
+
+    type_in_new = not args.typeNotInNew
 
     # Parse results
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
-                                                args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
+                                                min_gene_coverage, args.minDepthCoverage, type_separator,
+                                                sample=args.sample, save_new_allele=args.saveNewAllele,
+                                                assembly=assembly, extra_seq=length_extra_seq,
+                                                min_identity=min_gene_identity,
+                                                type_in_new=type_in_new)
 
     stx1_result, stx2_result = stx_subtype_parser(
         os.path.join(args.outdir, 'seq_typing.report_types.tab'),
@@ -202,7 +215,7 @@ def main():
         for folder in folders_2_remove:
             utils.removeDirectory(folder)
 
-    _ = utils.runTime(start_time)
+    _ = utils.run_time(program_name, start_time)
 
 
 if __name__ == "__main__":

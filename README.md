@@ -41,8 +41,8 @@ Determines which reference sequence is more likely to be present in a given samp
 </html>
 
 **seq_typing** is a software to determine a given sample type using either a read mapping approach or a sequence Blast search against a set of reference sequences.  
-For the read mapping approach, the sample's reads are mapped to the given reference sequences using [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml), parsed with [Samtools](http://www.htslib.org/) and analysed via [ReMatCh](https://github.com/B-UMMI/ReMatCh). Based on the length of the sequence covered and it's depth of coverage, **seq_typing** returns the type associated with the reference sequence which is more likely to be present. The selected sequence will be the one covered to a greater extent and with higher depth of coverage, that passes defined thresholds.  
-For the Blast approach (when using sequences fasta files) the sequence selected, for each DB sequence, the best Blast hit is retrieved. The best hit is defined by the largest alignment length, highest similarity, and lowest E-value and number of gaps (applied hierarchically following the order here described).  
+For the read mapping approach, the sample's reads are mapped to the given reference sequences using [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml), parsed with [Samtools](http://www.htslib.org/) and analysed via [ReMatCh](https://github.com/B-UMMI/ReMatCh). Based on the length of the sequence covered and it's depth of coverage, **seq_typing** returns the type associated with the reference sequence which is more likely to be present. The selected sequence will be the one covered to a greater extent, with higher depth of coverage and with the highest identity (applied hierarchically following the order here described), that passes defined thresholds.  
+For the Blast approach (when using sequences fasta files) the sequence selected, for each DB sequence, is determined accordingly with the best Blast hit. The best hit is defined by the largest alignment length, highest similarity, lowest E-value and number of gaps, and largest reference sequence length (applied hierarchically following the order here described). The selected sequence criteria is the same used with the read mapping approach (although the depth of coverage will always be 1).  
 In both cases, manual curation and sequence type definition is required for reference sequences database production.
 
 ## Input requirements
@@ -182,11 +182,11 @@ optional arguments:
 
 Required one of the following options:
   -r --reference /path/to/reference.fasta  ...
-                        Path to reference sequences file. If more than one
+                        Path to reference sequences files. If more than one
                         file is passed, a Bowtie2 index for each file will be
                         created. (default: None)
   --org escherichia coli
-                        Name of the organism with reference sequences provided
+                        Organism option with reference sequences provided
                         ("seqtyping/reference_sequences/" folder) together
                         with seq_typing.py for typing (default: None)
 
@@ -209,14 +209,14 @@ Run seq_typing.py using fastq files.
 usage: seq_typing.py reads [-h]
                            -f /path/to/input/file.fq.gz ...
                            -r /path/to/reference_sequence.fasta ... | --org escherichia coli
-                           [-o /path/to/output/directory/] [-j N]
+                           [-s sample-ID] [-o /path/to/output/directory/] [-j N]
                            [--typeSeparator _]
                            [--extraSeq N] [--minCovPresence N]
                            [--minCovCall N] [--minGeneCoverage N]
                            [--minDepthCoverage N] [--minGeneIdentity N]
-                           [--bowtieAlgo="--very-sensitive-local"]
-                           [--doNotRemoveConsensus] [--debug] [--resume]
-                           [--notClean]
+                           [--bowtieAlgo="--very-sensitive-local"] [--maxNumMapLoc N]
+                           [--doNotRemoveConsensus] [--saveNewAllele] [--typeNotInNew]
+                           [--debug] [--resume]
 
 Run seq_typing.py using fastq files. If running multiple samples using the
 same reference sequences file, consider use first "seq_typing.py index"
@@ -233,7 +233,7 @@ Required options:
 
 Required one of the following options:
   -r --reference /path/to/reference_sequence.fasta ...
-                        Path to reference sequences file. If Bowtie2 index was
+                        Path to reference sequences files. If Bowtie2 index was
                         already produced, only provide the file name that ends
                         with ".1.bt2", but without this termination (for
                         example, for a Bowtie2 index
@@ -244,11 +244,13 @@ Required one of the following options:
                         determined. Give the files name in the same order that
                         the type must be determined. (default: None)
   --org escherichia coli
-                        Name of the organism with reference sequences provided
+                        Organism option with reference sequences provided
                         together with seq_typing.py for typing
                         ("seqtyping/reference_sequences/" folder)
 
 General facultative options:
+  -s --sample sample-ID
+                        Sample name (default: sample)
   -o --outdir /path/to/output/directory/
                         Path to the directory where the information will be
                         stored (default: ./)
@@ -257,20 +259,22 @@ General facultative options:
                         header from the last part containing the type (default: _)
   --extraSeq N          Sequence length added to both ends of target sequences
                         (usefull to improve reads mapping to the target one)
-                        that will be trimmed in ReMatCh outputs (default: 0)
+                        that will be trimmed in ReMatCh outputs
+                        (default when not using --org: 0)
   --minCovPresence N    Reference position minimum coverage depth to consider
-                        the position to be present in the sample (default: 5)
+                        the position to be present in the sample
+                        (default when not using --org: 5)
   --minCovCall N        Reference position minimum coverage depth to perform a
-                        base call (default: 10)
+                        base call (default when not using --org: 10)
   --minGeneCoverage N   Minimum percentage of target reference sequence
                         covered to consider a sequence to be present (value
-                        between [0, 100]) (default: 60)
+                        between [0, 100]) (default when not using --org: 60)
   --minDepthCoverage N  Minimum depth of coverage of target reference sequence
                         to consider a sequence to be present (default: 2)
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
                         between [0, 100]). One INDEL will be considered as one
-                        difference (default: 80)
+                        difference
   --bowtieAlgo="--very-sensitive-local"
                         Bowtie2 alignment mode. It can be an end-to-end
                         alignment (unclipped alignment) or local alignment
@@ -282,7 +286,15 @@ General facultative options:
                         starting with an empty space
                         (like --bowtieAlgo " --very-fast") or using equal
                         sign (like --bowtieAlgo="--very-fast")
-                        (default: "--very-sensitive-local")
+                        (default when not using --org: "--very-sensitive-local")
+  --maxNumMapLoc N      Maximum number of locations to which a read can map
+                        (sometimes useful when mapping against similar sequences)
+                        (default when not using --org: 1)
+  --saveNewAllele       Save the new allele found for the selected type
+                        (default: false)
+  --typeNotInNew        Do not save the type of the selected sequence in the header
+                        of the new allele (when writing uses the "--typeSeparator").
+                        (default: false)
   --doNotRemoveConsensus
                         Do not remove ReMatCh consensus sequences
   --debug               Debug mode: do not remove temporary files
@@ -302,7 +314,7 @@ This is useful when running the same DB sequence file for different assemblies.
 usage: seq_typing.py blast [-h]
                            -t nucl
                            -f /path/to/db.sequences.fasta ... | --org escherichia coli
-                           [-o /path/to/output/directory/]
+                           [-o /path/to/output/directory/] [--extraSeq N]
 
 Creates Blast DB. This is useful when running the same DB sequence file for
 different assemblies.
@@ -312,10 +324,10 @@ optional arguments:
 
 Required one of the following options:
   -f --fasta /path/to/db.sequences.fasta ...
-                        Path to DB sequence file. If more than one file is
+                        Path to DB sequences files. If more than one file is
                         passed, a Blast DB for each file will be created.
   --org escherichia coli
-                        Name of the organism with DB sequence file provided
+                        Organism option with DB sequences files provided
                         ("seqtyping/reference_sequences/" folder) together with
                         seq_typing.py for typing
 
@@ -326,6 +338,10 @@ General facultative options:
   -o --outdir /path/to/output/directory/
                         Path to the directory where the information will be
                         stored (default: ./)
+  --extraSeq N          Sequence length added to both ends of target sequences
+                        (usefull when analysing data by reads mapping)
+                        that will be trimmed for Blast analysis.
+                        (default when not using --org: 0)
 ```
 
 ##### _assembly_ module  
@@ -341,9 +357,10 @@ If running multiple samples using the same DB sequence file, consider use first 
 usage: seq_typing.py assembly [-h]
                               -f /path/to/query/assembly_file.fasta
                               -b /path/to/Blast/db.sequences.file ... -t nucl | --org escherichia coli
-                              [-o /path/to/output/directory/] [-j N]
-                              [--typeSeparator _] [--minGeneCoverage N]
-                              [--minGeneIdentity N] [--debug]
+                              [-s sample-ID] [-o /path/to/output/directory/] [-j N]
+                              [--typeSeparator _] [--extraSeq N] [--minGeneCoverage N]
+                              [--minGeneIdentity N] [--saveNewAllele] [--typeNotInNew]
+                              [--debug] [--resume]
 
 Run seq_typing.py using a fasta file. If running multiple samples using the
 same DB sequence file, consider use first "seq_typing.py blast"
@@ -359,7 +376,7 @@ Required options:
 
 Required one of the following options:
   -b --blast /path/to/Blast/db.sequences.file ...
-                        Path to DB sequence file. If Blast DB was already
+                        Path to DB sequences files. If Blast DB was already
                         produced, only provide the file that do not end with
                         ".n*" something (do not use for example
                         /blast_db.sequences.fasta.nhr). If no Blast DB is
@@ -368,7 +385,7 @@ Required one of the following options:
                         type for each file will be determined. Give the files
                         in the same order that the type must be determined.
   --org escherichia coli
-                        Name of the organism with DB sequence file provided
+                        Organism option with DB sequences files provided
                         ("seqtyping/reference_sequences/" folder) together with
                         seq_typing.py for typing
 
@@ -376,19 +393,30 @@ Required option for --blast:
   -t --type nucl        Blast DB type (available options: nucl, prot)
 
 General facultative options:
+  -s --sample sample-ID
+                        Sample name (default: sample)
   -o --outdir /path/to/output/directory/
                         Path to the directory where the information will be
                         stored (default: ./)
   -j --threads N        Number of threads to use (default: 1)
   --typeSeparator _     Last single character separating the general sequence
                         header from the last part containing the type (default: _)
+  --extraSeq N          Sequence length added to both ends of target sequences
+                        (usefull when analysing data by reads mapping)
+                        that will be trimmed for Blast analysis.
   --minGeneCoverage N   Minimum percentage of target reference sequence
                         covered to consider a sequence to be present (value
-                        between [0, 100]) (default: 60)
+                        between [0, 100]) (default when not using --org: 60)
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
-                        between [0, 100]) (default: 80)
+                        between [0, 100])
+  --saveNewAllele       Save the new allele found for the selected type
+                        (default: false)
+  --typeNotInNew        Do not save the type of the selected sequence in the header
+                        of the new allele (when writing uses the "--typeSeparator").
+                        (default: false)
   --debug               Debug mode: do not remove temporary files
+  --resume              Resume seq_typing.py assembly
 ```
 
 #### Organisms typing
@@ -398,13 +426,19 @@ General facultative options:
  </div>
 </html>
 
-For the following organisms, references sequences are provided for serotyping.
-* _Escherichia coli_
-* _Haemophilus influenzae_
-* _Streptococcus agalactiae_
-* Dengue virus (with genotype information)
+For the following organisms, references sequences are provided.
+* **Serotyping**:
+  * _Escherichia coli_
+  * _Staph agr_ (_Staphylococcus aureus_, agr typing)
+  * _Haemophilus influenzae_
+  * _GBS sero_ (Group B Streptococcus, _Streptococcus agalactiae_, serotype)
+  * _Dengue virus_ (with genotype information)
+* **Other types**:
+  * _GBS pili_ (Group B Streptococcus, _Streptococcus agalactiae_, pili typing)
+  * _GBS surf_ (Group B Streptococcus, _Streptococcus agalactiae_, surface protein typing)
+  * _stx subtyping_ (_Escherichia coli_ stx subtyping)
 
-Use `--org` option with one of those organisms
+Use `--org` option with one of those organisms options
 
 #### Usage examples
 
@@ -574,13 +608,14 @@ usage: ecoli_stx_subtyping.py reads [-h]
                                     -f /path/to/input/file.fq.gz ...
                                     -r /path/to/reference_sequence.fasta ... | --org stx subtyping
                                     [--stx2covered N] [--stx2identity N]
-                                    [-o /path/to/output/directory/] [-j N]
+                                    [--sample sample-ID] [-o /path/to/output/directory/] [-j N]
                                     [--typeSeparator _]
                                     [--extraSeq N] [--minCovPresence N]
                                     [--minCovCall N] [--minGeneCoverage N]
                                     [--minDepthCoverage N] [--minGeneIdentity N]
-                                    [--doNotRemoveConsensus] [--debug] [--resume]
-                                    [--notClean]
+                                    [--bowtieAlgo="--very-sensitive-local"] [--maxNumMapLoc N]
+                                    [--doNotRemoveConsensus] [--saveNewAllele] [--typeNotInNew]
+                                    [--debug] [--resume]
 
 Run ecoli_stx_subtyping.py using fastq files
 
@@ -607,6 +642,8 @@ ecoli_stx_subtyping specific facultative options:
                         subtypes (value between [0, 100]) (default: 99.5)
 
 General facultative options:
+  -s --sample sample-ID
+                        Sample name (default: sample)
   -o --outdir /path/to/output/directory/
                         Path to the directory where the information will be
                         stored (default: ./)
@@ -628,7 +665,7 @@ General facultative options:
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
                         between [0, 100]). One INDEL will be considered as one
-                        difference (default: 80)
+                        difference
   --bowtieAlgo="--very-sensitive-local"
                         Bowtie2 alignment mode. It can be an end-to-end
                         alignment (unclipped alignment) or local alignment
@@ -640,11 +677,19 @@ General facultative options:
                         starting with an empty space
                         (like --bowtieAlgo " --very-fast") or using equal
                         sign (like --bowtieAlgo="--very-fast")
-                        (default: "--very-sensitive-local")
+                        (default when not using --org: "--very-sensitive-local")
+  --maxNumMapLoc N      Maximum number of locations to which a read can map
+                        (sometimes useful when mapping against similar sequences)
+                        (default when not using --org: 1)
+  --saveNewAllele       Save the new allele found for the selected type
+                        (default: false)
+  --typeNotInNew        Do not save the type of the selected sequence in the header
+                        of the new allele (when writing uses the "--typeSeparator").
+                        (default: false)
   --doNotRemoveConsensus
                         Do not remove ReMatCh consensus sequences
   --debug               Debug mode: do not remove temporary files
-  --resume              Resume ecoli_stx_subtyping.py reads
+  --resume              Resume seq_typing.py reads
 ```
 
 ##### ecoli_stx_subtyping Assembly
@@ -660,9 +705,10 @@ usage: ecoli_stx_subtyping.py assembly [-h]
                                        -f /path/to/query/assembly_file.fasta
                                        -b /path/to/Blast/db.sequences.file ... -t nucl | --org stx subtyping
                                        [--stx2covered N] [--stx2identity N]
-                                       [-o /path/to/output/directory/] [-j N]
-                                       [--typeSeparator _] [--minGeneCoverage N]
-                                       [--minGeneIdentity N] [--debug]
+                                       [--sample sample-ID] [-o /path/to/output/directory/] [-j N]
+                                       [--typeSeparator _] [--extraSeq N] [--minGeneCoverage N]
+                                       [--minGeneIdentity N] [--saveNewAllele] [--typeNotInNew]
+                                       [--debug] [--resume]
 
 Run ecoli_stx_subtyping.py using a fasta file. If running multiple samples using the
 same DB sequence file, consider use first "seq_typing.py blast"
@@ -701,19 +747,30 @@ ecoli_stx_subtyping specific facultative options:
                         subtypes (value between [0, 100]) (default: 99.5)
 
 General facultative options:
+  -s --sample sample-ID
+                        Sample name (default: sample)
   -o --outdir /path/to/output/directory/
                         Path to the directory where the information will be
                         stored (default: ./)
   -j --threads N        Number of threads to use (default: 1)
   --typeSeparator _     Last single character separating the general sequence
                         header from the last part containing the type (default: _)
+  --extraSeq N          Sequence length added to both ends of target sequences
+                        (usefull when analysing data by reads mapping)
+                        that will be trimmed for Blast analysis.
   --minGeneCoverage N   Minimum percentage of target reference sequence
                         covered to consider a sequence to be present (value
                         between [0, 100]) (default: 60)
   --minGeneIdentity N   Minimum percentage of identity of reference sequence
                         covered to consider a gene to be present (value
-                        between [0, 100]) (default: 80)
+                        between [0, 100])
+  --saveNewAllele       Save the new allele found for the selected type
+                        (default: false)
+  --typeNotInNew        Do not save the type of the selected sequence in the header
+                        of the new allele (when writing uses the "--typeSeparator").
+                        (default: false)
   --debug               Debug mode: do not remove temporary files
+  --resume              Resume seq_typing.py reads
 ```
 
 ##### Blast
@@ -809,20 +866,43 @@ Tabular file with detailed results:
 
 Example of _E. coli_ serotyping (two reference files) using reads:  
 
-| #sequence_type      | reference_file | type | sequence              | sequenced_covered | coverage_depth     | sequence_identity | query | q_start | q_end | s_start | s_end | evalue |
-|---------------------|----------------|------|-----------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|
-| selected            | O_type.fasta   | O26  | wzy_192_AF529080_O26  | 100.0             | 281.95405669599216 | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
-| selected            | H_type.fasta   | H11  | fliC_269_AY337465_H11 | 99.4546693933197  | 51.76490747087046  | 99.86291980808772 | NA    | NA      | NA    | NA      | NA    | NA     |
-| other_probable_type | O_type.fasta   | O26  | wzx_208_AF529080_O26  | 100.0             | 223.3072050673001  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
-| other_probable_type | H_type.fasta   | H11  | fliC_276_AY337472_H11 | 98.84117246080436 | 37.52551724137931  | 99.86206896551724 | NA    | NA      | NA    | NA      | NA    | NA     |
+| #sequence_type      | reference_file | type | sequence              | sequenced_covered | coverage_depth     | sequence_identity | query | q_start | q_end | s_start | s_end | evalue | gaps |
+|---------------------|----------------|------|-----------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|------| 
+| selected            | O_type.fasta   | O26  | wzy_192_AF529080_O26  | 100.0             | 281.95405669599216 | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
+| selected            | H_type.fasta   | H11  | fliC_269_AY337465_H11 | 99.4546693933197  | 51.76490747087046  | 99.86291980808772 | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
+| other_probable_type | O_type.fasta   | O26  | wzx_208_AF529080_O26  | 100.0             | 223.3072050673001  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
+| other_probable_type | H_type.fasta   | H11  | fliC_276_AY337472_H11 | 98.84117246080436 | 37.52551724137931  | 99.86206896551724 | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
 
 Example of Dengue virus serotyping and genotyping (only one reference file) using assembly:  
 
-| #sequence_type      | reference_file                 | type  | sequence                                                 | sequenced_covered | coverage_depth | sequence_identity | query                               | q_start | q_end | s_start | s_end | evalue |
-|---------------------|--------------------------------|-------|----------------------------------------------------------|-------------------|----------------|-------------------|-------------------------------------|---------|-------|---------|-------|--------|
-| selected            | 1_GenotypesDENV_14-05-18.fasta | 3-III | gb:EU529683|...|Subtype:3-III|Host:Human|seqTyping_3-III | 100.0             | 1              | 99.223            | NODE_1_length_10319_cov_2021.782660 | 138     | 10307 | 10170   | 1     | 0.0    |
-| other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 1-V   | gb:GQ868570|...|Subtype:1-V|Host:Human|seqTyping_1-V     | 100.0             | 1              | 99.479            | NODE_2_length_10199_cov_229.028848  | 13      | 10188 | 1       | 10176 | 0.0    |
-| other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 4-II  | gb:GQ868585|...|Subtype:4-II|Host:Human|seqTyping_4-II   | 100.0             | 1              | 99.38             | NODE_4_length_10182_cov_29.854132   | 13      | 10173 | 1       | 10161 | 0.0    |
+| #sequence_type      | reference_file                 | type  | sequence                                                 | sequenced_covered | coverage_depth | sequence_identity | query                               | q_start | q_end | s_start | s_end | evalue | gaps |
+|---------------------|--------------------------------|-------|----------------------------------------------------------|-------------------|----------------|-------------------|-------------------------------------|---------|-------|---------|-------|--------|------|
+| selected            | 1_GenotypesDENV_14-05-18.fasta | 3-III | gb:EU529683#...#Subtype:3-III#Host:Human#seqTyping_3-III | 100.0             | 1              | 99.223            | NODE_1_length_10319_cov_2021.782660 | 138     | 10307 | 10170   | 1     | 0.0    | 0    |
+| other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 1-V   | gb:GQ868570#...#Subtype:1-V#Host:Human#seqTyping_1-V     | 100.0             | 1              | 99.479            | NODE_2_length_10199_cov_229.028848  | 13      | 10188 | 1       | 10176 | 0.0    | 0    |
+| other_probable_type | 1_GenotypesDENV_14-05-18.fasta | 4-II  | gb:GQ868585#...#Subtype:4-II#Host:Human#seqTyping_4-II   | 100.0             | 1              | 99.38             | NODE_4_length_10182_cov_29.854132   | 13      | 10173 | 1       | 10161 | 0.0    | 3    |
+
+__new_allele/__  
+Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. If it is not possible to retreive the entire sequence of the new allele, "\_partial" string will be added to the header. The header of the sequence will contain the sample name (the default is "sample") and the selected type separated by the `--typeSeparator` option (this behaviour can be deactivated with the `--typeNotInNew` option).  
+In the case of using extra/flanking sequences to the target sequence, if the full length of such extra/flanking sequences could be retreived, a new file ending with "_.extra_seq.fasta_" will be created (not yet implemented for reads).
+
+__Example__  
+For Dengue virus serotyping and genotyping:
+```
+/outdir/
+        seq_typing.report.txt
+        seq_typing.report_types.tab
+        
+        new_allele/
+                   1_GenotypesDENV_14-05-18.fasta/
+                                                  3-III.fasta
+                                                             >sample_partial_3-III
+                                                             ATGTAAGCATGAGGTCACCAT ...
+                                                  3-III.extra_seq.fasta
+                                                             >sample_partial_3-III
+                                                             CCCCCTTTTTATGTAAGCATGAGGTCACCAT ...
+
+        run.20190131-162341.log
+```
 
 __run.*.log__  
 Running log file.  
@@ -838,19 +918,48 @@ __seq_typing.ecoli_stx_subtyping.txt__
 Text file with the typing result. The secondary results for _stx2_ genes are presented between brackets.  
 Example:  
 `stx1a:stx2c(stx2d)`  
+*__NOTE__*: For _stx2_ gene, _stx2a_, _stx2c_ and _stx2d_ variants are grouped together as _stx2acd_ due to the fact
+ that all of these subtypes are the most potent ones to cause HUS and are difficult to separate from each other by the
+ methods in use right now.  
 
 __seq_typing.ecoli_stx_subtyping.report_types.tab__  
 Tabular file with detailed results similar to the above _seq_typing.report_types.tab_ file:  
 Example (using reads):  
 
-| #sequence_type      | reference_file                      | type  | sequence                            | sequenced_covered | coverage_depth     | sequence_identity | query | q_start | q_end | s_start | s_end | evalue |
-|---------------------|-------------------------------------|-------|-------------------------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|
-| selected            | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1A:15:AF461168:A:seqTyping_stx1a | 100.0             | 65.37447257383967  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
-| selected            | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:15:AB071845:C:seqTyping_stx2c | 100.0             | 19.377777777777776 | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
-| other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1c | stx1B:11:AB071620:C:seqTyping_stx1c | 100.0             | 21.64814814814815  | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     |
-| other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1B:14:AM230663:A:seqTyping_stx1a | 100.0             | 45.06666666666667  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     |
-| other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:10:EF441604:C:seqTyping_stx2c | 100.0             | 17.2               | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     |
-| other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2d | stx2B:11:FM998840:D:seqTyping_stx2d | 100.0             | 9.996296296296297  | 99.62962962962963 | NA    | NA      | NA    | NA      | NA    | NA     |
+| #sequence_type      | reference_file                      | type  | sequence                            | sequenced_covered | coverage_depth     | sequence_identity | query | q_start | q_end | s_start | s_end | evalue | gaps |
+|---------------------|-------------------------------------|-------|-------------------------------------|-------------------|--------------------|-------------------|-------|---------|-------|---------|-------|--------|------|
+| selected            | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1A:15:AF461168:A:seqTyping_stx1a | 100.0             | 65.37447257383967  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
+| selected            | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:15:AB071845:C:seqTyping_stx2c | 100.0             | 19.377777777777776 | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
+| other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1c | stx1B:11:AB071620:C:seqTyping_stx1c | 100.0             | 21.64814814814815  | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
+| other_probable_type | 1_virulence_db.stx1_subtyping.fasta | stx1a | stx1B:14:AM230663:A:seqTyping_stx1a | 100.0             | 45.06666666666667  | 100.0             | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
+| other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2c | stx2B:10:EF441604:C:seqTyping_stx2c | 100.0             | 17.2               | 99.25925925925925 | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
+| other_probable_type | 2_virulence_db.stx2_subtyping.fasta | stx2d | stx2B:11:FM998840:D:seqTyping_stx2d | 100.0             | 9.996296296296297  | 99.62962962962963 | NA    | NA      | NA    | NA      | NA    | NA     | NA   |
+
+__new_allele/__  
+Folder with a subfolder named with the reference file name from which the new allele was found. The novel allele is stored inside a file named with the selected type. If it is not possible to retreive the entire sequence of the new allele, "\_partial" string will be added to the header. The header of the sequence will contain the sample name (the default is "sample") and the selected type separated by the `--typeSeparator` option (this behaviour can be deactivated with the `--typeNotInNew` option).  
+In the case of using extra/flanking sequences to the target sequence, if the full length of such extra/flanking sequences could be retreived, a new file ending with "_.extra_seq.fasta_" will be created (not yet implemented for reads).
+
+Example:
+```
+/outdir/
+        seq_typing.ecoli_stx_subtyping.txt
+        seq_typing.ecoli_stx_subtyping.report_types.tab
+        
+        new_allele/
+                   2_virulence_db.stx2_subtyping.fasta/
+                                                       stx2c.fasta
+                                                                  >sample_stx2c
+                                                                  ATGTAAGCATGAGGTCACCAT ...
+                                                       stx2c.extra_seq.fasta
+                                                                  >sample_stx2c
+                                                                  CCCCCTTTTTATGTAAGCATGAGGTCACCAT ...
+                   1_virulence_db.stx1_subtyping.fasta/
+                                                       stx1a.extra_seq.fasta
+                                                                  >sample_partial
+                                                                  CCCCCTTTTTATGTAAGCATGAGGTCACCAT ...
+
+        run.20190131-162341.log
+```
 
 __run.*.log__  
 Running log file.  

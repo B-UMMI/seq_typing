@@ -9,6 +9,7 @@ import functools
 import os.path
 import sys
 import argparse
+from functools import wraps as functools_wraps
 
 
 def start_logger(workdir):
@@ -96,7 +97,7 @@ def required_programs(programs_version_dictionary):
         sys.exit('\n' + 'Errors:' + '\n' + '\n'.join(missing_programs))
 
 
-def general_information(script_name, logfile, version, outdir, time_str):
+def general_information(script_name, logfile, version):
     # Check if output directory exists
 
     print('\n' + '==========> seq_typing <==========')
@@ -176,29 +177,38 @@ def script_version_git(version, current_directory, script_path, no_git_info=Fals
             os.chdir(current_directory)
 
 
-def runTime(start_time):
+def time_taken_human_readable(time_taken_sec, name):
+    hours, rest = divmod(time_taken_sec, 3600)
+    minutes, seconds = divmod(rest, 60)
+    s = '"{name}" runtime: {h}h:{m}m:{s}s\n'.format(name=name, h=hours, m=minutes, s=round(seconds, 2))
+    return s
+
+
+def run_time(name, start_time, print_info=True):
     end_time = time.time()
     time_taken = end_time - start_time
-    hours, rest = divmod(time_taken, 3600)
-    minutes, seconds = divmod(rest, 60)
-    print('Runtime :' + str(hours) + 'h:' + str(minutes) + 'm:' + str(round(seconds, 2)) + 's')
+    if print_info:
+        print(time_taken_human_readable(time_taken_sec=time_taken, name=name))
     return round(time_taken, 2)
 
 
-def timer(function, name):
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-        print('\n' + 'RUNNING {0}\n'.format(name))
-        start_time = time.time()
+def timer(name, print_info=True):
+    def real_decorator(function):
+        @functools_wraps(function)
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            results = function(*args, **kwargs)
+            if isinstance(results, (list, tuple)):
+                results = list(results)
+            else:
+                results = [results]
+            time_taken = run_time(name, start_time, print_info)
+            results.insert(0, time_taken)
+            return results
 
-        results = list(function(*args, **kwargs))  # guarantees return is a list to allow .insert()
+        return wrapper
 
-        time_taken = runTime(start_time)
-        print('END {0}'.format(name))
-
-        results.insert(0, time_taken)
-        return results
-    return wrapper
+    return real_decorator
 
 
 def removeDirectory(directory):
@@ -265,7 +275,7 @@ def runCommandPopenCommunicate(command, shell_True, timeout_sec_None, print_coma
         run_successfully = True
     else:
         if not print_comand_True and not_killed_by_timer:
-            print('Running: ' + str(command))
+            print('Running: {}'.format(command))
         if len(stdout) > 0:
             print('STDOUT')
             print(stdout.decode("utf-8"))
@@ -432,7 +442,29 @@ def parse_reference(reference, problematic_characters):
                     headers_correspondence[header] = str(original_header)
                     sequence = ''
                 else:
+                    if '>' in line:
+                        raise ValueError('A > character was found between the sequence of {}'.format(header))
                     sequence += line.replace(' ', '').upper()
         if len(sequence) > 0:
             reference_dict[header] = sequence
     return reference_dict, headers_correspondence
+
+
+def reverse(seq):
+    """Returns a reversed string"""
+    return seq[::-1]
+
+
+def complement(seq):
+    """Returns a complement DNA sequence"""
+    complement_dict = {'A': 'T', 'C': 'G', 'T': 'A', 'G': 'C',
+                       'Y': 'R', 'R': 'Y', 'W': 'W', 'S': 'S', 'K': 'M', 'M': 'K',
+                       'D': 'H', 'V': 'B', 'H': 'D', 'B': 'V',
+                       'N': 'N', 'X': 'N',
+                       '-': '-'}
+    return ''.join(list(map(lambda base: complement_dict[base.upper()], list(seq))))
+
+
+def reverse_complement(seq):
+    """"Returns a reverse complement DNA sequence"""
+    return complement(reverse(seq))

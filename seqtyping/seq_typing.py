@@ -9,7 +9,7 @@ in a given sample
 
 Copyright (C) 2019 Miguel Machado <mpmachado@medicina.ulisboa.pt>
 
-Last modified: January 10, 2019
+Last modified: January 28, 2019
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -50,7 +50,8 @@ except ImportError:
 
 def parse_config(config_file):
     config = {'length_extra_seq': None, 'minimum_depth_presence': None, 'minimum_depth_call': None,
-              'minimum_gene_coverage': None}
+              'minimum_gene_coverage': None, 'bowtie_algorithm': None, 'maximum_number_mapped_locations': None,
+              'minimum_gene_identity': None}
 
     with open(config_file, 'rtU') as reader:
         field = None
@@ -63,13 +64,11 @@ def parse_config(config_file):
                     field = line
                 else:
                     if field is not None:
-                        if field in ['length_extra_seq', 'minimum_depth_presence', 'minimum_depth_call',
-                                     'minimum_gene_coverage']:
-                            line = int(line)
-                            if field == 'minimum_gene_coverage':
+                        if field in list(config.keys()):
+                            line = int(line) if field != 'bowtie_algorithm' else line
+                            if field in ('minimum_gene_coverage', 'minimum_gene_identity'):
                                 if line < 0 or line > 100:
-                                    sys.exit('minimum_gene_coverage in config file must be an integer between 0 and'
-                                             ' 100')
+                                    sys.exit('{} in config file must be an integer between 0 and 100'.format(field))
                         config[field] = line
                         field = None
 
@@ -139,15 +138,14 @@ def include_rematch_dependencies_path():
     if run_successfully:
         original_rematch = stdout.splitlines()[0]
 
-    resource_rematch = None
     try:
         resource_rematch = resource_filename('ReMatCh', 'rematch.py')
-    except ModuleNotFoundError:
+    except ImportError:
         resource_rematch = original_rematch
-    else:
-        print('\n'
-              'Using ReMatCh "{resource_rematch}" via "{original_rematch}"\n'.format(resource_rematch=resource_rematch,
-                                                                                     original_rematch=original_rematch))
+
+    print('\n'
+          'Using ReMatCh "{resource_rematch}" via "{original_rematch}"\n'.format(resource_rematch=resource_rematch,
+                                                                                 original_rematch=original_rematch))
 
     if resource_rematch is not None:
         utils.setPATHvariable(False, resource_rematch)
@@ -256,29 +254,49 @@ def assembly_subcommand(args):
                   '\n')
         args.type = 'nucl'
         args.minGeneCoverage = config['minimum_gene_coverage']
+        args.minGeneIdentity = config['minimum_gene_identity']
         args.typeSeparator = '_'
+        args.extraSeq = config['length_extra_seq']
 
         print('\n'
               'Settings that will be used:\n'
               '    DB reference file: {reference}\n'
               '    Blast DB type: nucl\n'
               '    minGeneCoverage: {minGeneCoverage}\n'
-              '    Type separator character: {typeSeparator}'
-              '\n'.format(reference=args.blast, minGeneCoverage=args.minGeneCoverage, typeSeparator=args.typeSeparator))
+              '    minGeneIdentity: {minGeneIdentity}\n'
+              '    Type separator character: {typeSeparator}\n'
+              '    extraSeq: {extraSeq}\n'
+              '\n'.format(reference=args.blast, minGeneCoverage=args.minGeneCoverage, typeSeparator=args.typeSeparator,
+                          extraSeq=args.extraSeq, minGeneIdentity=args.minGeneIdentity))
 
     folders_2_remove_all = []
     references_results_all = {}
     references_headers_all = {}
     blast_files = []
     for blast in args.blast:
-        _, folders_2_remove, blast_results, blast, headers_correspondence = run_blast.run_blast(blast, args.outdir,
-                                                                                                args.type, args.fasta)
+        _, folders_2_remove, blast_results, blast, headers_correspondence = \
+            run_blast.run_blast(blast_db_path=blast,
+                                outdir=args.outdir,
+                                blast_type=args.type,
+                                query_fasta_file=args.fasta,
+                                extra_seq=args.extraSeq)
         folders_2_remove_all.extend(folders_2_remove)
         references_results_all[blast] = blast_results
         references_headers_all[blast] = headers_correspondence
         blast_files.append(blast)
 
-    return folders_2_remove_all, references_results_all, blast_files, references_headers_all
+    args_config_dict = {'length_extra_seq': args.extraSeq,
+                        'minimum_depth_presence': None,
+                        'minimum_depth_call': None,
+                        'minimum_gene_coverage': args.minGeneCoverage,
+                        'minimum_gene_identity': args.minGeneIdentity,
+                        'bowtie_algorithm': None,
+                        'maximum_number_mapped_locations': None,
+                        'type_separator': args.typeSeparator,
+                        'type': args.type}
+
+    return (folders_2_remove_all, references_results_all, blast_files, references_headers_all, args.fasta,
+            args_config_dict)
 
 
 def blast_subcommand(args):
@@ -296,19 +314,22 @@ def blast_subcommand(args):
     if args.fasta is not None:
         args.fasta = [os.path.abspath(fasta.name) for fasta in args.fasta]
     else:
-        args.fasta, _ = get_fasta_config(args.org)
+        args.fasta, config = get_fasta_config(args.org)
+        config = parse_config(config)
         if args.type != 'nucl':
             print('\n'
                   'ATTENTION: Blast DB type provided was not "nucl"\n'
                   'It was changed to "nucl"'
                   '\n')
         args.type = 'nucl'
+        args.extraSeq = config['length_extra_seq']
 
         print('\n'
               'Settings that will be used:\n'
               '    fasta: {reference}\n'
               '    Blast DB type: nucl\n'
-              '\n'.format(reference=args.fasta))
+              '    extraSeq: {extraSeq}\n'
+              '\n'.format(reference=args.fasta, extraSeq=args.extraSeq))
 
     utils.removeDirectory(os.path.join(args.outdir, 'pickles', ''))
 
@@ -318,12 +339,28 @@ def blast_subcommand(args):
         blast_db = os.path.join(args.outdir, '{blast_DB}'.format(blast_DB=os.path.basename(fasta)))
         db_exists, original_file = run_blast.check_db_exists(blast_db)
         if not db_exists and not original_file:
-            db_exists = run_blast.create_blast_db(fasta, blast_db, args.type)
+            fasta_to_use = fasta
+
+            trimmed_seq_dir = os.path.join(args.outdir, 'trimmed_sequences', '')
+            if args.extraSeq > 0:
+                if not os.path.isdir(trimmed_seq_dir):
+                    os.makedirs(trimmed_seq_dir)
+                fasta_to_use = run_blast.trim_extra_sequences(
+                    in_seq_file=fasta,
+                    out_seq_file=os.path.join(
+                        trimmed_seq_dir,
+                        os.path.splitext(os.path.basename(fasta))[0] + '.trimmed_{}.fasta'.format(args.extraSeq)),
+                    extra_seq=args.extraSeq)
+
+            db_exists = run_blast.create_blast_db(fasta_to_use, blast_db, args.type)
             if db_exists:
                 print('Blast DB created for {file} in {outdir}'.format(file=fasta, outdir=args.outdir))
                 # sys.exit(0)
             else:
                 error_msg.append('It was not possible to create Blast DB or {}'.format(fasta))
+
+            utils.removeDirectory(trimmed_seq_dir)
+
         elif db_exists and original_file:
             error_msg.append('Blast DB already found for {file} in {outdir} as {blast_db}'.format(file=fasta,
                                                                                                   outdir=args.outdir,
@@ -403,6 +440,7 @@ def write_seq_from_sequence_dict(sequence_dict, out_fasta_file):
 
 
 def reads_subcommand(args):
+
     msg = []
     # if args.reference is None and args.org is None:
     #     argparse.ArgumentParser.error('--reference or --org must be provided')
@@ -412,7 +450,9 @@ def reads_subcommand(args):
         msg.append('--minGeneIdentity should be a value between [0, 100]')
 
     if len(msg) > 0:
-        argparse.ArgumentParser(prog='assembly subcommand options').error('\n'.join(msg))
+        argparse.ArgumentParser(prog='reads subcommand options').error('\n'.join(msg))
+
+    min_gene_identity = args.minGeneIdentity
 
     rematch_script = include_rematch_dependencies_path()
 
@@ -435,14 +475,21 @@ def reads_subcommand(args):
 
         clean_run_rematch = False
 
-        args.reference = [os.path.abspath(reference) for reference in args.reference]
+        args.reference = [os.path.abspath(reference.name) for reference in args.reference]
 
         reference_files = {}
 
         for reference in args.reference:
             fasta_file, index_files, pickle_file = check_reference_exist(reference)
+            
             if not fasta_file and len(index_files) == 0 and not pickle_file:
-                sys.exit('Missing reference fasta file, Bowtie2 index of pickle file for {}'.format(reference))
+                raise FileNotFoundError('Missing reference fasta file, Bowtie2 index of pickle file for {}'.format(reference))
+            
+            print('\n'
+                'Using pre-computed index:\n'
+                '{}'
+                '\n'.format('\n'.join(index_files)))
+
             reference_files[reference] = fasta_file, index_files, pickle_file
 
         references_to_use = []
@@ -540,6 +587,9 @@ def reads_subcommand(args):
         args.minCovPresence = config['minimum_depth_presence']
         args.minCovCall = config['minimum_depth_call']
         args.minGeneCoverage = config['minimum_gene_coverage']
+        args.minGeneIdentity = config['minimum_gene_identity']
+        args.bowtieAlgo = config['bowtie_algorithm']
+        args.maxNumMapLoc = config['maximum_number_mapped_locations']
         args.typeSeparator = '_'
 
         print('\n'
@@ -549,10 +599,14 @@ def reads_subcommand(args):
               '    minCovPresence: {minCovPresence}\n'
               '    minCovCall: {minCovCall}\n'
               '    minGeneCoverage: {minGeneCoverage}\n'
+              '    minGeneIdentity: {minGeneIdentity}\n'
+              '    bowtieAlgo: {bowtieAlgo}\n'
+              '    maxNumMapLoc: {maxNumMapLoc}\n'
               '    Type separator character: {typeSeparator}'
               '\n'.format(reference=args.reference, extraSeq=args.extraSeq, minCovPresence=args.minCovPresence,
-                          minCovCall=args.minCovCall, minGeneCoverage=args.minGeneCoverage,
-                          typeSeparator=args.typeSeparator))
+                          minCovCall=args.minCovCall, minGeneCoverage=args.minGeneCoverage, bowtieAlgo=args.bowtieAlgo,
+                          maxNumMapLoc=args.maxNumMapLoc, typeSeparator=args.typeSeparator,
+                          minGeneIdentity=args.minGeneIdentity))
 
     pickles_folder = os.path.join(args.outdir, 'pickles', '')
 
@@ -561,20 +615,33 @@ def reads_subcommand(args):
     if args.resume and os.path.isfile(pickle_file):
         print('ReMatCh module already run')
         references_results, module_dir = utils.extractVariableFromPickle(pickle_file)
-        folders_2_remove.append(module_dir)
     else:
         _, references_results, module_dir = run_rematch.run_rematch(rematch_script, args.outdir, args.reference,
                                                                     args.fastq, args.threads, args.extraSeq,
                                                                     args.minCovPresence, args.minCovCall,
                                                                     args.minFrequencyDominantAllele,
-                                                                    args.minGeneCoverage, args.minGeneIdentity,
+                                                                    args.minGeneCoverage, min_gene_identity,
                                                                     args.debug, args.doNotRemoveConsensus,
-                                                                    args.bowtieAlgo,
-                                                                    clean_run_rematch=clean_run_rematch)
-        folders_2_remove.append(module_dir)
+                                                                    bowtie_algorithm=args.bowtieAlgo,
+                                                                    max_number_mapped_location=args.maxNumMapLoc,
+                                                                    clean_run_rematch=clean_run_rematch,
+                                                                    save_new_allele=args.saveNewAllele)
         utils.saveVariableToPickle([references_results, module_dir], pickle_file)
 
-    return folders_2_remove, references_results, args.reference, references_headers
+    if not args.doNotRemoveConsensus:
+        folders_2_remove.append(module_dir)
+
+    args_config_dict = {'length_extra_seq': args.extraSeq,
+                        'minimum_depth_presence': args.minCovPresence,
+                        'minimum_depth_call': args.minCovCall,
+                        'minimum_gene_coverage': args.minGeneCoverage,
+                        'minimum_gene_identity': args.minGeneIdentity,
+                        'bowtie_algorithm': args.bowtieAlgo,
+                        'maximum_number_mapped_locations': args.maxNumMapLoc,
+                        'type_separator': args.typeSeparator,
+                        'type': None}
+
+    return folders_2_remove, references_results, args.reference, references_headers, None, args_config_dict
 
 
 def index_subcommand(args):
@@ -681,9 +748,9 @@ def python_arguments(program_name, version):
                                        required=True)
 
     parser_reads_reference = parser_reads.add_mutually_exclusive_group(required=True)
-    parser_reads_reference.add_argument('-r', '--reference', nargs='+', type=str,
+    parser_reads_reference.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'),
                                         metavar='/path/to/reference/sequences.file',
-                                        help='Path to reference sequences file. If Bowtie2 index was already produced,'
+                                        help='Path to reference sequences files. If Bowtie2 index was already produced,'
                                              ' only provide the file name that ends with ".1.bt2", but without this'
                                              ' termination (for example, for a Bowtie2 index'
                                              ' "/file/sequences.fasta.1.bt2", only provide "/file/sequences.fasta").'
@@ -692,25 +759,26 @@ def python_arguments(program_name, version):
                                              ' determined. Give the files name in the same order that the type must be'
                                              ' determined.')
     parser_reads_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                        help='Name of the organism with reference sequences provided together'
+                                        help='Organism option with reference sequences provided together'
                                              ' with {} for typing ("seqtyping/reference_sequences/"'
                                              ' folder)'.format(parser.prog),
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
     parser_reads_optional_general = parser_reads.add_argument_group('General facultative options')
+    parser_reads_optional_general.add_argument('-s', '--sample', type=str, metavar='sample-ID', help='Sample name',
+                                               required=False, default='sample')
     parser_reads_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                               help='Path to the directory where the information will be stored'
-                                                    ' (default: ./',
+                                               help='Path to the directory where the information will be stored',
                                                required=False, default='.')
     parser_reads_optional_general.add_argument('-j', '--threads', type=int, metavar='N',
-                                               help='Number of threads to use (default: 1)', required=False, default=1)
+                                               help='Number of threads to use', required=False, default=1)
     parser_reads_optional_general.add_argument('--mapRefTogether', action='store_true',
                                                help=argparse.SUPPRESS)
     # parser_reads_optional_general.add_argument('--mapRefTogether', action='store_true',
     #                                            help='Map the reads against all references together')
     parser_reads_optional_general.add_argument('--typeSeparator', type=str, metavar='_',
                                                help='Last single character separating the general sequence header from'
-                                                    ' the last part containing the type (default: _)',
+                                                    ' the last part containing the type',
                                                required=False, default='_')
     parser_reads_optional_general.add_argument('--extraSeq', type=int, metavar='N',
                                                help='Sequence length added to both ends of target sequences (usefull to'
@@ -739,14 +807,15 @@ def python_arguments(program_name, version):
                                                required=False, default=60)
     parser_reads_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N',
                                                help='Minimum depth of coverage of target reference sequence to'
-                                                    ' consider a sequence to be present (default: 2)',
+                                                    ' consider a sequence to be present',
                                                required=False, default=2)
     # parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N', help=argparse.SUPPRESS,
     #                                            required=False, default=80)
     parser_reads_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
                                                help='Minimum percentage of identity of reference sequence covered to'
                                                     ' consider a gene to be present (value between [0, 100]). One INDEL'
-                                                    ' will be considered as one difference (default: 80)',
+                                                    ' will be considered as one difference'
+                                                    ' (default when not using --org: 80)',
                                                required=False, default=80)
     parser_reads_optional_general.add_argument('--bowtieAlgo', type=str, metavar='"--very-sensitive-local"',
                                                help='Bowtie2 alignment mode. It can be an end-to-end alignment'
@@ -756,24 +825,33 @@ def python_arguments(program_name, version):
                                                     ' http://bowtie-bio.sourceforge.net/bowtie2/index.shtml .'
                                                     ' This option should be provided between quotes and starting with'
                                                     ' an empty space (like --bowtieAlgo " --very-fast") or using equal'
-                                                    ' sign (like --bowtieAlgo="--very-fast")',
+                                                    ' sign (like --bowtieAlgo="--very-fast") (default when not'
+                                                    ' using --org: "--very-sensitive-local")',
                                                required=False, default='--very-sensitive-local')
+    parser_reads_optional_general.add_argument('--maxNumMapLoc', type=int, metavar='N',
+                                               help='Maximum number of locations to which a read can map (sometimes'
+                                                    ' useful when mapping against similar sequences) (default when not'
+                                                    ' using --org: 1)',
+                                               required=False, default=1)
     parser_reads_optional_general.add_argument('--doNotRemoveConsensus', action='store_true',
                                                help='Do not remove ReMatCh consensus sequences')
+    parser_reads_optional_general.add_argument('--saveNewAllele', action='store_true',
+                                               help='Save the new allele found for the selected type')
+    parser_reads_optional_general.add_argument('--typeNotInNew', action='store_true',
+                                               help='Do not save the type of the selected sequence in the header of the'
+                                                    ' new allele (when writing uses the "--typeSeparator")')
     parser_reads_optional_general.add_argument('--debug', action='store_true',
                                                help='Debug mode: do not remove temporary files')
     parser_reads_optional_general.add_argument('--resume', action='store_true',
                                                help='Resume %(prog)s')
-    parser_reads_optional_general.add_argument('--notClean', action='store_true',
-                                               help='Do not remove intermediate files')
 
     parser_index_reference = parser_index.add_mutually_exclusive_group(required=True)
-    parser_index_reference.add_argument('-r', '--reference', nargs='+', type=str,
+    parser_index_reference.add_argument('-r', '--reference', nargs='+', type=argparse.FileType('r'),
                                         metavar='/path/to/reference/sequences.fasta',
-                                        help='Path to reference sequences file. If more than one file is passed, a'
+                                        help='Path to reference sequences files. If more than one file is passed, a'
                                              ' Bowtie2 index for each file will be created.')
     parser_index_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                        help='Name of the organism with reference sequences provided'
+                                        help='Organism option with reference sequences provided'
                                              ' ("seqtyping/reference_sequences/" folder) together'
                                              ' with seq_typing.py for typing',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
@@ -796,14 +874,14 @@ def python_arguments(program_name, version):
     parser_assembly_reference = parser_assembly.add_mutually_exclusive_group(required=True)
     parser_assembly_reference.add_argument('-b', '--blast', nargs='+', type=argparse.FileType('r'),
                                            metavar='/path/to/Blast/db.sequences.file',
-                                           help='Path to DB sequence file. If Blast DB was already produced, only'
+                                           help='Path to DB sequences files. If Blast DB was already produced, only'
                                                 ' provide the file that do not end with ".n*" something (do not use for'
                                                 ' example /blast_db.sequences.fasta.nhr). If no Blast DB is found for'
                                                 ' the DB sequence file, one will be created in --outdir. If more than'
                                                 ' one Blast DB file is passed, a type for each file will be determined.'
                                                 ' Give the files in the same order that the type must be determined.')
     parser_assembly_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                           help='Name of the organism with DB sequence file provided'
+                                           help='Organism option with DB sequences files provided'
                                                 ' ("seqtyping/reference_sequences/" folder) together'
                                                 ' with seq_typing.py for typing',
                                            action=utils.arguments_choices_words(get_species_allowed(), '--org'))
@@ -813,16 +891,22 @@ def python_arguments(program_name, version):
                                                     help='Blast DB type (available options: %(choices)s)')
 
     parser_assembly_optional_general = parser_assembly.add_argument_group('General facultative options')
+    parser_assembly_optional_general.add_argument('-s', '--sample', type=str, metavar='sample-ID', help='Sample name',
+                                                  required=False, default='sample')
     parser_assembly_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                                  help='Path to the directory where the information will be stored'
-                                                       ' (default: ./)',
+                                                  help='Path to the directory where the information will be stored',
                                                   required=False, default='.')
     parser_assembly_optional_general.add_argument('-j', '--threads', type=int, metavar='N', required=False,
-                                                  help='Number of threads to use (default: 1)', default=1)
+                                                  help='Number of threads to use', default=1)
     parser_assembly_optional_general.add_argument('--typeSeparator', type=str, metavar='_',
                                                   help='Last single character separating the general sequence header'
-                                                       ' from the last part containing the type (default: _)',
+                                                       ' from the last part containing the type',
                                                   required=False, default='_')
+    parser_assembly_optional_general.add_argument('--extraSeq', type=int, metavar='N',
+                                                  help='Sequence length added to both ends of target sequences (usefull'
+                                                       ' when analysing data by reads mapping) that will be trimmed for'
+                                                       ' Blast analysis (default when not using --org: 0)',
+                                                  required=False, default=0)
     parser_assembly_optional_general.add_argument('--minGeneCoverage', type=int, metavar='N',
                                                   help='Minimum percentage of target reference sequence covered to'
                                                        ' consider a sequence to be present (value between [0, 100])'
@@ -831,10 +915,15 @@ def python_arguments(program_name, version):
     parser_assembly_optional_general.add_argument('--minGeneIdentity', type=int, metavar='N',
                                                   help='Minimum percentage of identity of reference sequence covered'
                                                        ' to consider a gene to be present (value between [0, 100])'
-                                                       ' (default: 80)',
-                                                  required=False, default=80)
+                                                       ' (default when not using --org: 0)',
+                                                  required=False, default=0)
     parser_assembly_optional_general.add_argument('--minDepthCoverage', type=int, metavar='N', help=argparse.SUPPRESS,
                                                   required=False, default=1)
+    parser_assembly_optional_general.add_argument('--saveNewAllele', action='store_true',
+                                                  help='Save the new allele found for the selected type')
+    parser_assembly_optional_general.add_argument('--typeNotInNew', action='store_true',
+                                                  help='Do not save the type of the selected sequence in the header of'
+                                                       ' the new allele (when writing uses the "--typeSeparator").')
     parser_assembly_optional_general.add_argument('--debug', action='store_true',
                                                   help='Debug mode: do not remove temporary files')
     parser_assembly_optional_general.add_argument('--resume', action='store_true', help=argparse.SUPPRESS)
@@ -846,19 +935,23 @@ def python_arguments(program_name, version):
     parser_blast_reference = parser_blast.add_mutually_exclusive_group(required=True)
     parser_blast_reference.add_argument('-f', '--fasta', nargs='+', type=argparse.FileType('r'),
                                         metavar='/path/to/db.sequences.fasta',
-                                        help='Path to DB sequence file. If more than one file is passed, a Blast DB for'
-                                             ' each file will be created.')
+                                        help='Path to DB sequences files. If more than one file is passed, a Blast DB'
+                                             ' for each file will be created.')
     parser_blast_reference.add_argument('--org', nargs=2, type=str.lower, metavar=('escherichia', 'coli'),
-                                        help='Name of the organism with DB sequence file provided'
+                                        help='Organism option with DB sequences files provided'
                                              ' ("seqtyping/reference_sequences/" folder) together'
                                              ' with seq_typing.py for typing',
                                         action=utils.arguments_choices_words(get_species_allowed(), '--org'))
 
     parser_blast_optional_general = parser_blast.add_argument_group('General facultative options')
     parser_blast_optional_general.add_argument('-o', '--outdir', type=str, metavar='/path/to/output/directory/',
-                                               help='Path to the directory where the information will be stored'
-                                                    ' (default: ./)',
+                                               help='Path to the directory where the information will be stored',
                                                required=False, default='.')
+    parser_blast_optional_general.add_argument('--extraSeq', type=int, metavar='N',
+                                               help='Sequence length added to both ends of target sequences (usefull'
+                                                    ' when analysing data by reads mapping) that will be trimmed for'
+                                                    ' Blast analysis (default when not using --org: 0)',
+                                               required=False, default=0)
 
     parser_reads.set_defaults(func=reads_subcommand)
     parser_index.set_defaults(func=index_subcommand)
@@ -886,9 +979,7 @@ def main():
     # Start logger
     logfile, time_str = utils.start_logger(args.outdir)
 
-    script_path = utils.general_information(script_name=program_name, logfile=logfile, version=__version__,
-                                            outdir=args.outdir, time_str=time_str)
-    del script_path
+    _ = utils.general_information(script_name=program_name, logfile=logfile, version=__version__)
     print('\n')
 
     folders_2_remove = []
@@ -900,18 +991,29 @@ def main():
     folders_2_remove.append(pickles_folder)
 
     # Run functions
-    folders_2_remove_func, references_results, reference, references_headers = args.func(args)
+    folders_2_remove_func, references_results, reference, references_headers, assembly, args_config_dict = \
+        args.func(args)
     folders_2_remove.extend(folders_2_remove_func)
+
+    min_gene_identity = args_config_dict['minimum_gene_identity']
+    min_gene_coverage = args_config_dict['minimum_gene_coverage']
+    type_separator = args_config_dict['type_separator']
+    length_extra_seq = args_config_dict['length_extra_seq']
+
+    type_in_new = not args.typeNotInNew
 
     # Parse results
     _, _, _, _, _ = parse_results.parse_results(references_results, reference, references_headers, args.outdir,
-                                                args.minGeneCoverage, args.minDepthCoverage, args.typeSeparator)
-
+                                                min_gene_coverage, args.minDepthCoverage, type_separator,
+                                                sample=args.sample, save_new_allele=args.saveNewAllele,
+                                                assembly=assembly, extra_seq=length_extra_seq,
+                                                min_identity=min_gene_identity,
+                                                type_in_new=type_in_new)
     if not args.debug:
         for folder in folders_2_remove:
             utils.removeDirectory(folder)
 
-    _ = utils.runTime(start_time)
+    _ = utils.run_time(program_name, start_time)
 
 
 if __name__ == "__main__":
