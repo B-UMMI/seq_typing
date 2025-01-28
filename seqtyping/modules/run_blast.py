@@ -108,12 +108,25 @@ def create_blast_db(db_sequences, db_output, db_type):
                   ' present in Blast DB directory ({db_dir}), but no Blast DB files were found'
                   ' there.'.format(db_sequences=db_sequences, db_dir=os.path.dirname(db_output)))
         else:
-            run_successfully, _, _ = utils.runCommandPopenCommunicate(['makeblastdb', '-parse_seqids', '-dbtype',
-                                                                       db_type, '-in', db_sequences, '-out', db_output],
-                                                                      False, None, True)
-            if run_successfully:
-                from shutil import copyfile
-                copyfile(db_sequences, db_output)
+            for parse_seqids in [True, False]:
+                command = [
+                    'makeblastdb',
+                    '-dbtype', db_type,
+                    '-in', db_sequences,
+                    '-out', db_output
+                ]
+                if parse_seqids:
+                    command += ["-parse_seqids"]
+                run_successfully, _, _ = utils.runCommandPopenCommunicate(
+                    command,
+                    False,
+                    None,
+                    True
+                )
+                if run_successfully:
+                    from shutil import copyfile
+                    copyfile(db_sequences, db_output)
+                    return run_successfully
 
     return run_successfully
 
