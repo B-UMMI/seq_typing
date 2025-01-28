@@ -31,7 +31,6 @@ import time
 
 from Bio import SeqIO
 from Bio import Seq
-from Bio.Alphabet import generic_dna
 from Bio.SeqRecord import SeqRecord
 
 from itertools import product
@@ -64,7 +63,7 @@ def extend_ambiguous_dna(seq):
         List with all different possible sequences. If memory does not allow to get all possible sequences, return None.
     """
 
-    d = Seq.IUPAC.IUPACData.ambiguous_dna_values
+    d = Seq.IUPACData.ambiguous_dna_values
 
     try:
         all_possible_sequences = list(map(''.join, product(*map(d.get, seq))))
@@ -110,7 +109,7 @@ def main():
     # Get STX sequences
     stx_seq = {}
     # stx_seq_write = []
-    allowed_chars = set(Seq.IUPAC.IUPACData.unambiguous_dna_letters)
+    allowed_chars = set(Seq.IUPACData.unambiguous_dna_letters)
     with open(os.path.join(args.outdir,
                            'virulence_db.virulence_ecoli.commit_{commit}.problematic_sequences.tab'.format(
                                commit=commit)), 'wt', newline='\n') as writer:
@@ -143,7 +142,7 @@ def main():
                         # print(seq.id, set(seq.seq.upper()))
                         all_possible_sequences = extend_ambiguous_dna(seq.seq.upper())
                         if all_possible_sequences is not None:
-                            seq = SeqRecord(Seq.Seq(all_possible_sequences[0], generic_dna),
+                            seq = SeqRecord(Seq.Seq(all_possible_sequences[0]),
                                             id='{seq_name}:IUPAC_codes_removed'.format(seq_name=seq.id),
                                             description='')  # Change the sequence
                         else:
