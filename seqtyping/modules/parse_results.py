@@ -19,6 +19,7 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
     high_seq_cov = 0
     high_seq_depth = 0
     high_seq_ident = 0
+    low_seq_evalue = 1000000
 
     fields = ['gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for gene, rematch_results in data_by_gene.items():
@@ -26,6 +27,7 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
         coverage_depth = rematch_results['gene_mean_read_coverage']
         sequence_identity = rematch_results['gene_identity']
         sequence_matching_bases = rematch_results["alignment_length"] * sequence_identity / 100
+        sequence_evalue = rematch_results["evalue"]
         if rematch_results['s_length'] != 'NA':
             if rematch_results['gaps'] != 'NA':
                 gaps_ponderation = rematch_results['gaps'] / rematch_results['s_length'] * 100
@@ -44,22 +46,26 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
                 if sequence_identity < min_identity:
                     improbable_sequences[sequenced_covered] = gene
                 else:
-                    if sequence_matching_bases > high_seq_bases:
+                    if sequence_matching_bases > high_seq_bases and sequence_evalue <= low_seq_evalue:
+                        low_seq_evalue = sequence_evalue
                         high_seq_bases = sequence_matching_bases
                         high_seq_cov = seq_cov_ceil
                         high_seq_depth = coverage_depth
                         high_seq_ident = sequence_identity
-                    elif sequence_matching_bases == high_seq_bases:
+                    elif sequence_matching_bases == high_seq_bases and sequence_evalue <= low_seq_evalue:
                         if seq_cov_ceil > high_seq_cov:
+                            low_seq_evalue = sequence_evalue
                             high_seq_cov = seq_cov_ceil
                             high_seq_depth = coverage_depth
                             high_seq_ident = sequence_identity
                         elif seq_cov_ceil == high_seq_cov:
                             if coverage_depth > high_seq_depth:
+                                low_seq_evalue = sequence_evalue
                                 high_seq_depth = coverage_depth
                                 high_seq_ident = sequence_identity
                             elif coverage_depth == high_seq_depth:
                                 if sequence_identity > high_seq_ident:
+                                    low_seq_evalue = sequence_evalue
                                     high_seq_ident = sequence_identity
 
                     if seq_cov_ceil == high_seq_cov and \
