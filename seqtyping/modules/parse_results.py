@@ -7,7 +7,7 @@ except ImportError:
     from seqtyping.modules import utils as utils
 
 
-extra_blast_fields = ['query', 'q_start', 'q_end', 'q_length', 's_start', 's_end', 's_length', 'evalue', 'gaps']
+extra_blast_fields = ['alignment_length', 'query', 'q_start', 'q_end', 'q_length', 's_start', 's_end', 's_length', 'evalue', 'gaps']
 
 
 def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_identity=0):
@@ -15,6 +15,7 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
     probable_sequences = {}
     improbable_sequences = {}
 
+    high_seq_bases = 0
     high_seq_cov = 0
     high_seq_depth = 0
     high_seq_ident = 0
@@ -22,7 +23,9 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
     fields = ['gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for gene, rematch_results in data_by_gene.items():
         sequenced_covered = rematch_results['gene_coverage']
-
+        coverage_depth = rematch_results['gene_mean_read_coverage']
+        sequence_identity = rematch_results['gene_identity']
+        sequence_matching_bases = rematch_results["alignment_length"] * sequence_identity / 100
         if rematch_results['s_length'] != 'NA':
             if rematch_results['gaps'] != 'NA':
                 gaps_ponderation = rematch_results['gaps'] / rematch_results['s_length'] * 100
@@ -30,11 +33,7 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
                 gaps_ponderation = 0
         else:
             gaps_ponderation = 0
-
         seq_cov_ceil = sequenced_covered - gaps_ponderation
-
-        coverage_depth = rematch_results['gene_mean_read_coverage']
-        sequence_identity = rematch_results['gene_identity']
 
         if sequenced_covered < min_gene_coverage:
             improbable_sequences[sequenced_covered] = gene
@@ -45,17 +44,23 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
                 if sequence_identity < min_identity:
                     improbable_sequences[sequenced_covered] = gene
                 else:
-                    if seq_cov_ceil > high_seq_cov:
+                    if sequence_matching_bases > high_seq_bases:
+                        high_seq_bases = sequence_matching_bases
                         high_seq_cov = seq_cov_ceil
                         high_seq_depth = coverage_depth
                         high_seq_ident = sequence_identity
-                    elif seq_cov_ceil == high_seq_cov:
-                        if coverage_depth > high_seq_depth:
+                    elif sequence_matching_bases == high_seq_bases:
+                        if seq_cov_ceil > high_seq_cov:
+                            high_seq_cov = seq_cov_ceil
                             high_seq_depth = coverage_depth
                             high_seq_ident = sequence_identity
-                        elif coverage_depth == high_seq_depth:
-                            if sequence_identity > high_seq_ident:
+                        elif seq_cov_ceil == high_seq_cov:
+                            if coverage_depth > high_seq_depth:
+                                high_seq_depth = coverage_depth
                                 high_seq_ident = sequence_identity
+                            elif coverage_depth == high_seq_depth:
+                                if sequence_identity > high_seq_ident:
+                                    high_seq_ident = sequence_identity
 
                     if seq_cov_ceil == high_seq_cov and \
                         coverage_depth == high_seq_depth and \
@@ -444,11 +449,11 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                         if gene_coverage != 100 or data[3] < 100:
                             new_allele_found = True
                             save_new_allele_assembly(sample=sample, new_allele_dir=new_allele_dir,
-                                                     reference_file=reference, query=data[4],
+                                                     reference_file=reference, query=data[5],
                                                      selected_type=data[0].rsplit(type_separator, 1)[1],
-                                                     assembly=assembly, q_start=data[5], q_end=data[6],
-                                                     q_length=data[7], s_start=data[8], s_end=data[9],
-                                                     s_length=data[10], extra_seq=extra_seq,
+                                                     assembly=assembly, q_start=data[6], q_end=data[7],
+                                                     q_length=data[8], s_start=data[9], s_end=data[10],
+                                                     s_length=data[11], extra_seq=extra_seq,
                                                      type_in_new=type_in_new, type_separator=type_separator)
 
                 typeable_references = True
