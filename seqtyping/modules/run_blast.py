@@ -115,8 +115,12 @@ def create_blast_db(db_sequences, db_output, db_type):
                     '-in', db_sequences,
                     '-out', db_output
                 ]
+
                 if parse_seqids:
                     command += ["-parse_seqids"]
+                else:
+                    print(f"Trying again running makeblastdb without -parse_seqids for {db_sequences}")
+
                 run_successfully, _, _ = utils.runCommandPopenCommunicate(
                     command,
                     False,

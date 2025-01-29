@@ -425,20 +425,24 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
 
         print('\n' + 'TYPEABLE REFERENCES')
         typeable_references = False
+        selected_types = set()
         for reference, data in seq_type_info.items():
             if len(data) > 0:
+                selected_type = data[0].rsplit(type_separator, 1)[1]
+                selected_types.add(selected_type)
+
                 gene_coverage = data[1]
                 data[1] = round(data[1], 2)
 
                 print('\n' +
                       '\n'.join(['Reference file: {}'.format(reference),
-                                 'Type: {}'.format(data[0].rsplit(type_separator, 1)[1]),
+                                 'Type: {}'.format(selected_type),
                                  'Sequence: {}'.format(data[0]),
                                  'Sequenced covered: {}'.format(data[1]),
                                  'Coverage depth: {}'.format(data[2]),
                                  'Sequence identity: {}'.format(data[3])]) +
                       '\n')
-                writer.write('\t'.join(['selected', reference, data[0].rsplit(type_separator, 1)[1]] +
+                writer.write('\t'.join(['selected', reference, selected_type] +
                                        list(map(str, data))) + '\n')
 
                 if save_new_allele:
@@ -449,14 +453,14 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                                                              os.path.basename(reference))
                             save_new_allele_reads(sample=sample, new_allele_dir=new_allele_dir,
                                                   rematch_consensus=rematch_consensus, sequence_selected=data[0],
-                                                  selected_type=data[0].rsplit(type_separator, 1)[1],
+                                                  selected_type=selected_type,
                                                   type_in_new=type_in_new, type_separator=type_separator)
                     else:
                         if gene_coverage != 100 or data[3] < 100:
                             new_allele_found = True
                             save_new_allele_assembly(sample=sample, new_allele_dir=new_allele_dir,
                                                      reference_file=reference, query=data[5],
-                                                     selected_type=data[0].rsplit(type_separator, 1)[1],
+                                                     selected_type=selected_type,
                                                      assembly=assembly, q_start=data[6], q_end=data[7],
                                                      q_length=data[8], s_start=data[9], s_end=data[10],
                                                      s_length=data[11], extra_seq=extra_seq,
@@ -472,10 +476,17 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
 
         for reference, types in probable_results.items():
             if len(types) > 0:
-                print('\n' +
-                      'Other possible types found for {reference}!\n'
-                      'Check seq_typing.report.other_probable_types.tab file.'.format(reference=reference) +
-                      '\n')
+                _probable_types = set(map(lambda probable_type: probable_type[0].rsplit(type_separator, 1)[1], types))
+                new_probable_types = _probable_types.difference(selected_type)
+
+                if len(new_probable_types) > 0:
+                    print(
+                        "\n"
+                        f"Other possible types found for {reference}!\n"
+                        "Check other_probable_type in sequence_type column (first) in seq_typing.report_types.tab file."
+                        "\n"
+                    )
+
                 for probable_type in types:
                     probable_type[1] = round(probable_type[1], 2)
                     writer.write('\t'.join(['other_probable_type',
