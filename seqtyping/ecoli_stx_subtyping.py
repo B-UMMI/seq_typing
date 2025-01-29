@@ -218,14 +218,14 @@ def main():
 
     stx1A_result, stx2A_result = stx_subtype_parser(
         os.path.join(args.outdir, "seq_typing.report_types.tab"),
-        [ref_file for ref_file in reference if "stx1A" in os.path.basename(ref_file).lower()][0],
-        [ref_file for ref_file in reference if "stx2A" in os.path.basename(ref_file).lower()][0],
+        [ref_file for ref_file in reference if "stx1a" in os.path.basename(ref_file).lower()][0],
+        [ref_file for ref_file in reference if "stx2a" in os.path.basename(ref_file).lower()][0],
         args.stx2Acovered, args.stx2Aidentity)
 
     stx1B_result, stx2B_result = stx_subtype_parser(
         os.path.join(args.outdir, "seq_typing.report_types.tab"),
-        [ref_file for ref_file in reference if "stx1B" in os.path.basename(ref_file).lower()][0],
-        [ref_file for ref_file in reference if "stx2B" in os.path.basename(ref_file).lower()][0],
+        [ref_file for ref_file in reference if "stx1b" in os.path.basename(ref_file).lower()][0],
+        [ref_file for ref_file in reference if "stx2b" in os.path.basename(ref_file).lower()][0],
         args.stx2Bcovered, args.stx2Bidentity)
 
     # Rename the file to keep ecoli_stx_subtyping stamp
