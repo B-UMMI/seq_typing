@@ -111,7 +111,7 @@ def rematch_for_different_references(fastq, references_files, threads, outdir, e
 
         not_write_consensus_rematch = not doNotRemoveConsensus and not save_new_allele
 
-        time_taken, run_successfully, data_by_gene, sample_data_general, consensus_files, consensus_sequences = \
+        _, run_successfully, data_by_gene, _, consensus_files, _ = \
             rematch_module.run_rematch_module('sample', fastq, reference, threads, ref_dir, extraSeq,
                                               minCovPresence, minCovCall, minFrequencyDominantAllele, minGeneCoverage,
                                               debug, max_number_mapped_location, minGeneIdentity, 'first', 7, 'none',

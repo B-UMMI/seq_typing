@@ -7,7 +7,7 @@ except ImportError:
     from seqtyping.modules import utils as utils
 
 
-extra_blast_fields = ['alignment_length', 'query', 'q_start', 'q_end', 'q_length', 's_start', 's_end', 's_length', 'evalue', 'gaps']
+extra_blast_fields = ['alignment_length', 'query', 'q_start', 'q_end', 'q_length', 's_start', 's_end', 'evalue', 'gaps']
 
 
 def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_identity=0):
@@ -21,20 +21,23 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
     high_seq_ident = 0
     low_seq_evalue = 1000000
 
-    fields = ['gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
+    fields = ['ref_length', 'gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for gene, rematch_results in data_by_gene.items():
+
         sequenced_covered = rematch_results['gene_coverage']
         coverage_depth = rematch_results['gene_mean_read_coverage']
         sequence_identity = rematch_results['gene_identity']
-        sequence_matching_bases = rematch_results["alignment_length"] * sequence_identity / 100
-        sequence_evalue = rematch_results["evalue"]
-        if rematch_results['s_length'] != 'NA':
-            if rematch_results['gaps'] != 'NA':
-                gaps_ponderation = rematch_results['gaps'] / rematch_results['s_length'] * 100
-            else:
-                gaps_ponderation = 0
+
+        sequence_matching_bases = rematch_results["ref_length"] * sequenced_covered * sequence_identity
+
+        sequence_evalue = rematch_results["evalue"] if rematch_results["evalue"] != "NA" else 0
+        # Continue from here
+        
+        if rematch_results['gaps'] != 'NA':
+            gaps_ponderation = rematch_results['gaps'] / rematch_results['ref_length'] * 100
         else:
             gaps_ponderation = 0
+
         seq_cov_ceil = sequenced_covered - gaps_ponderation
 
         if sequenced_covered < min_gene_coverage:
@@ -171,7 +174,7 @@ def add_empty_blast_info(data_dict):
     Returns
     -------
     data_dict : dict
-        Return the input dictionary already with ['query', 'q_start', 'q_end', 'q_length', 's_start', 's_end',
+        Return the input dictionary already with ['query', 'q_start', 'q_end', 'ref_length', 's_start', 's_end',
         's_length', 'evalue', 'gaps'] fields as 'NA'
     """
     for field in extra_blast_fields:

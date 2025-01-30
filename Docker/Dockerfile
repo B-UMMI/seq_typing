@@ -18,6 +18,7 @@ RUN apk add bash git libstdc++
 # --- ReMatCh ---
 RUN git clone https://github.com/B-UMMI/ReMatCh.git && \
     cd ReMatCh && \
+    git checkout feature/save_ref_length && \
     python3 setup.py install && \
     cd /NGStools
 
