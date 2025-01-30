@@ -135,7 +135,7 @@ def main():
                         stx_seq_seq[stx_subunit] = []
 
                     _subtype = fields[0][4]
-                    if _subtype == "-":
+                    if _subtype in ["-", " ", "_", ":"]:
                         continue
 
                     '''
