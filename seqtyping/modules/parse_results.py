@@ -8,6 +8,7 @@ except ImportError:
 
 
 extra_blast_fields = ['alignment_length', 'query', 'q_start', 'q_end', 'q_length', 's_start', 's_end', 'evalue', 'gaps']
+fields = ['ref_length', 'gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
 
 
 def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_identity=0):
@@ -19,9 +20,7 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
     high_seq_cov = 0
     high_seq_depth = 0
     high_seq_ident = 0
-    low_seq_evalue = 1000000
 
-    fields = ['ref_length', 'gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for gene, rematch_results in data_by_gene.items():
 
         sequenced_covered = rematch_results['gene_coverage']
@@ -30,9 +29,6 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
 
         sequence_matching_bases = rematch_results["ref_length"] * sequenced_covered * sequence_identity
 
-        sequence_evalue = rematch_results["evalue"] if rematch_results["evalue"] != "NA" else 0
-        # Continue from here
-        
         if rematch_results['gaps'] != 'NA':
             gaps_ponderation = rematch_results['gaps'] / rematch_results['ref_length'] * 100
         else:
@@ -49,31 +45,28 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
                 if sequence_identity < min_identity:
                     improbable_sequences[sequenced_covered] = gene
                 else:
-                    if sequence_matching_bases > high_seq_bases and sequence_evalue <= low_seq_evalue:
-                        low_seq_evalue = sequence_evalue
+                    if sequence_matching_bases > high_seq_bases:
                         high_seq_bases = sequence_matching_bases
                         high_seq_cov = seq_cov_ceil
                         high_seq_depth = coverage_depth
                         high_seq_ident = sequence_identity
-                    elif sequence_matching_bases == high_seq_bases and sequence_evalue <= low_seq_evalue:
+                    elif sequence_matching_bases == high_seq_bases:
                         if seq_cov_ceil > high_seq_cov:
-                            low_seq_evalue = sequence_evalue
                             high_seq_cov = seq_cov_ceil
                             high_seq_depth = coverage_depth
                             high_seq_ident = sequence_identity
                         elif seq_cov_ceil == high_seq_cov:
                             if coverage_depth > high_seq_depth:
-                                low_seq_evalue = sequence_evalue
                                 high_seq_depth = coverage_depth
                                 high_seq_ident = sequence_identity
                             elif coverage_depth == high_seq_depth:
                                 if sequence_identity > high_seq_ident:
-                                    low_seq_evalue = sequence_evalue
                                     high_seq_ident = sequence_identity
 
-                    if seq_cov_ceil == high_seq_cov and \
-                        coverage_depth == high_seq_depth and \
-                            sequence_identity == high_seq_ident:
+                    if sequence_matching_bases == high_seq_bases and \
+                        seq_cov_ceil == high_seq_cov and \
+                            coverage_depth == high_seq_depth and \
+                                sequence_identity == high_seq_ident:
                         if len(sequence) > 0:
                             probable_sequences[next(iter(sequence.values()))] = \
                                 [data_by_gene[next(iter(sequence.values()))][field] for field in fields]
@@ -115,7 +108,6 @@ def get_results(references_results, min_gene_coverage, min_depth_coverage, type_
         probable_results[original_reference] = []
         improbable_results[original_reference] = []
 
-    fields = ['gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for reference, data in intermediate_results.items():
         sequence = data[0]
         probable_sequences = data[1]
@@ -434,39 +426,37 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
                 selected_type = data[0].rsplit(type_separator, 1)[1]
                 selected_types.add(selected_type)
 
-                gene_coverage = data[1]
-                data[1] = round(data[1], 2)
+                gene_coverage = data[2]
+                data[2] = round(data[2], 2)
 
                 print('\n' +
                       '\n'.join(['Reference file: {}'.format(reference),
                                  'Type: {}'.format(selected_type),
                                  'Sequence: {}'.format(data[0]),
-                                 'Sequenced covered: {}'.format(data[1]),
-                                 'Coverage depth: {}'.format(data[2]),
-                                 'Sequence identity: {}'.format(data[3])]) +
+                                 'Sequenced covered: {}'.format(data[2]),
+                                 'Coverage depth: {}'.format(data[3]),
+                                 'Sequence identity: {}'.format(data[4])]) +
                       '\n')
                 writer.write('\t'.join(['selected', reference, selected_type] +
                                        list(map(str, data))) + '\n')
 
                 if save_new_allele:
-                    if assembly is None:
-                        if gene_coverage < 100 or data[3] < 100:
-                            new_allele_found = True
+                    if gene_coverage != 100 or data[4] < 100:
+                        new_allele_found = True
+                        if assembly is None:
                             rematch_consensus = os.path.join(outdir, 'rematch', 'new_allele',
                                                              os.path.basename(reference))
                             save_new_allele_reads(sample=sample, new_allele_dir=new_allele_dir,
                                                   rematch_consensus=rematch_consensus, sequence_selected=data[0],
                                                   selected_type=selected_type,
                                                   type_in_new=type_in_new, type_separator=type_separator)
-                    else:
-                        if gene_coverage != 100 or data[3] < 100:
-                            new_allele_found = True
+                        else:
                             save_new_allele_assembly(sample=sample, new_allele_dir=new_allele_dir,
-                                                     reference_file=reference, query=data[5],
+                                                     reference_file=reference, query=data[6],
                                                      selected_type=selected_type,
-                                                     assembly=assembly, q_start=data[6], q_end=data[7],
-                                                     q_length=data[8], s_start=data[9], s_end=data[10],
-                                                     s_length=data[11], extra_seq=extra_seq,
+                                                     assembly=assembly, q_start=data[7], q_end=data[8],
+                                                     q_length=data[9], s_start=data[10], s_end=data[11],
+                                                     s_length=data[1], extra_seq=extra_seq,
                                                      type_in_new=type_in_new, type_separator=type_separator)
 
                 typeable_references = True
@@ -499,7 +489,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
 
         for reference, data in improbable_results.items():
             if len(data) > 0:
-                data[1] = round(data[1], 2)
+                data[2] = round(data[2], 2)
                 writer.write('\t'.join(['most_likely', reference, data[0].rsplit(type_separator, 1)[1]] +
                                        list(map(str, data))) + '\n')
 
