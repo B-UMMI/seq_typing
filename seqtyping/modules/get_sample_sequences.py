@@ -5,7 +5,12 @@
 import os, sys, argparse, time
 
 
-_VERSION_ = '0.1'
+try:
+    from __init__ import __version__ as _VERSION_
+except ImportError:
+    from seqtyping.__init__ import __version__ as _VERSION_
+
+
 _PROGRAM_NAME_ = os.path.basename(__file__)
 
 

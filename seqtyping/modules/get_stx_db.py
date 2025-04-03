@@ -37,15 +37,16 @@ from Bio.SeqUtils import IUPACData
 from itertools import product
 
 try:
+    from __init__ import __version__ as version
+
     import modules.utils as utils
 except ImportError:
+    from seqtyping.__init__ import __version__ as version
+
     try:
         from seqtyping.modules import utils as utils
     except ImportError:
         import utils
-
-
-version = '2.0.0'
 
 
 def extend_ambiguous_dna(seq):
