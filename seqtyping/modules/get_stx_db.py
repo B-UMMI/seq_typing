@@ -32,19 +32,21 @@ import time
 from Bio import SeqIO
 from Bio import Seq
 from Bio.SeqRecord import SeqRecord
+from Bio.SeqUtils import IUPACData
 
 from itertools import product
 
 try:
+    from __init__ import __version__ as version
+
     import modules.utils as utils
 except ImportError:
+    from seqtyping.__init__ import __version__ as version
+
     try:
         from seqtyping.modules import utils as utils
     except ImportError:
         import utils
-
-
-version = '1.1'
 
 
 def extend_ambiguous_dna(seq):
@@ -63,7 +65,7 @@ def extend_ambiguous_dna(seq):
         List with all different possible sequences. If memory does not allow to get all possible sequences, return None.
     """
 
-    d = Seq.IUPACData.ambiguous_dna_values
+    d = IUPACData.ambiguous_dna_values
 
     try:
         all_possible_sequences = list(map(''.join, product(*map(d.get, seq))))
@@ -108,17 +110,34 @@ def main():
 
     # Get STX sequences
     stx_seq = {}
+    stx_seq_seq = {}
     # stx_seq_write = []
-    allowed_chars = set(Seq.IUPACData.unambiguous_dna_letters)
+    allowed_chars = set(IUPACData.unambiguous_dna_letters)
     with open(os.path.join(args.outdir,
                            'virulence_db.virulence_ecoli.commit_{commit}.problematic_sequences.tab'.format(
                                commit=commit)), 'wt', newline='\n') as writer:
         for seq in SeqIO.parse(os.path.join(virulencefinder_db, 'virulence_ecoli.fsa'), 'fasta'):
             if seq.id.lower().startswith('stx'):
-                subtype = seq.id.split(':')
-                if len(subtype) == 4:
-                    if seq.id[:4] not in stx_seq:
-                        stx_seq[seq.id[:4]] = []
+                stx_dimer = seq.id[:4].lower()
+
+                if len(seq.seq) > 800:
+                    stx_subunit = stx_dimer + "A"
+                elif 400 > len(seq.seq) > 100:
+                    stx_subunit = stx_dimer + "B"
+                else:
+                    print(f"Undetermined stx_subunit for {seq.id}")
+                    continue
+
+                fields = seq.id.split(':')
+                if len(fields[0]) >= 5:
+                    if stx_subunit not in stx_seq:
+                        stx_seq[stx_subunit] = []
+                    if stx_subunit not in stx_seq_seq:
+                        stx_seq_seq[stx_subunit] = []
+
+                    _subtype = fields[0][4]
+                    if _subtype in ["-", " ", "_", ":"]:
+                        continue
 
                     '''
                     Jani
@@ -129,18 +148,24 @@ def main():
                     subtypes are the most potent ones to cause HUS and cannot be separated from each other by the
                     methods in use right now.
                     '''
-                    if subtype[0][:4] == 'stx2' and subtype[3] in ['a', 'c', 'd']:
-                        subtype[3] = 'acd'
 
-                    subtype = subtype[0][:4] + subtype[3]  # Define subtype
+
+                    subtype = _subtype
+                    if stx_dimer == 'stx2' and _subtype in ['a', 'c', 'd']:
+                        subtype = 'acd'
+                    else:
+                        subtype = _subtype
+
+                    subtype_str = stx_subunit + subtype  # Define subtype
                     # if subtype not in stx_seq[seq_name[3]]:
                     #     stx_seq[seq_name[3]][subtype] = []
                     seq.description = ''  # To avoid description to be print in outfile
 
                     # For sequences with IUPAC codes, use one possible sequence based on the one with the codes
-                    if not set(seq.seq.upper()).issubset(allowed_chars):
+                    seq_seq = seq.seq.upper()
+                    if not set(seq_seq).issubset(allowed_chars):
                         # print(seq.id, set(seq.seq.upper()))
-                        all_possible_sequences = extend_ambiguous_dna(seq.seq.upper())
+                        all_possible_sequences = extend_ambiguous_dna(seq_seq)
                         if all_possible_sequences is not None:
                             seq = SeqRecord(Seq.Seq(all_possible_sequences[0]),
                                             id='{seq_name}:IUPAC_codes_removed'.format(seq_name=seq.id),
@@ -149,16 +174,22 @@ def main():
                             writer.write('\t'.join([seq.id, 'Memory Error (too much IUPAC codes)']))
                             continue
 
-                    seq.id = '{seq_name}:seqTyping_{subtype}'.format(seq_name=seq.id, subtype=subtype)
-                    stx_seq[seq.id[:4]].append(seq)
-                    # stx_seq_write.append(seq)
+                    if seq_seq not in stx_seq_seq[stx_subunit] or not any(seq_seq in seq_db for seq_db in stx_seq_seq[stx_subunit]):
+                        seq_id = seq.id.replace(" ", "_")
+                        seq.id = f"{seq_id}:seqTyping_{subtype_str}"
+                        stx_seq[stx_subunit].append(seq)
+                        # stx_seq_write.append(seq)
+                        stx_seq_seq[stx_subunit].append(seq_seq)
 
     # Write files
-    for gene, seqs in stx_seq.items():
-        with open(os.path.join(args.outdir,
-                               'virulence_db.virulence_ecoli.commit_{commit}.{gene}_subtyping.seq_typing.fasta'.format(
-                                   commit=commit, gene=gene)), 'wt', newline='\n') as writer:
+    gene_counter = 1
+    for gene, seqs in sorted(stx_seq.items()):
+        with open(os.path.join(
+                args.outdir,
+                f"virulence_db.virulence_ecoli.commit_{commit}.{gene_counter}_{gene}_subtyping.seq_typing.fasta"
+            ), "wt", newline="\n") as writer:
             _ = SeqIO.write(seqs, writer, "fasta")
+        gene_counter += 1
 
     # print(len(stx_seq))
     # for gene, subtype_dict in stx_seq.items():

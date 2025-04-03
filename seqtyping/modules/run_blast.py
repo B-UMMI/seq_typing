@@ -115,8 +115,12 @@ def create_blast_db(db_sequences, db_output, db_type):
                     '-in', db_sequences,
                     '-out', db_output
                 ]
+
                 if parse_seqids:
                     command += ["-parse_seqids"]
+                else:
+                    print(f"Trying again running makeblastdb without -parse_seqids for {db_sequences}")
+
                 run_successfully, _, _ = utils.runCommandPopenCommunicate(
                     command,
                     False,
@@ -222,7 +226,7 @@ def parse_blast_output(blast_output):
                                                  'q_start': int(line[4]), 'q_end': int(line[5]),
                                                  'q_length': int(line[1]),
                                                  's_start': int(line[6]), 's_end': int(line[7]),
-                                                 's_length': int(line[3]),
+                                                 'ref_length': int(line[3]),
                                                  'evalue': float(line[8]), 'gaps': int(line[13]), 'query': line[0],
                                                  'alignment_length': int(line[9]), 'subject_length': int(line[3])}
                     else:
@@ -234,7 +238,7 @@ def parse_blast_output(blast_output):
                                                  'q_start': int(line[4]), 'q_end': int(line[5]),
                                                  'q_length': int(line[1]),
                                                  's_start': int(line[6]), 's_end': int(line[7]),
-                                                 's_length': int(line[3]),
+                                                 'ref_length': int(line[3]),
                                                  'evalue': float(line[8]), 'gaps': int(line[13]), 'query': line[0],
                                                  'alignment_length': int(line[9]), 'subject_length': int(line[3])}
 

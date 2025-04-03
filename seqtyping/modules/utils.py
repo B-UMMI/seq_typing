@@ -269,7 +269,10 @@ def runCommandPopenCommunicate(command, shell_True, timeout_sec_None, print_coma
         time_counter.start()
         stdout, stderr = proc.communicate()
         time_counter.cancel()
-        not_killed_by_timer = time_counter.isAlive()
+        try:
+            not_killed_by_timer = time_counter.isAlive()
+        except AttributeError:
+            not_killed_by_timer = time_counter.is_alive()
 
     if proc.returncode == 0:
         run_successfully = True
