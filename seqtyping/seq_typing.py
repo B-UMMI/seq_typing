@@ -456,7 +456,13 @@ def reads_subcommand(args):
 
     rematch_script = include_rematch_dependencies_path()
 
-    utils.required_programs({'rematch.py': ['--version', '>=', '4.0.1']})
+    utils.required_programs({
+        'rematch.py': ['--version', '>=', '4.0.1'],
+        'bowtie2-build': ['--version', '>=', '2.2.9'],
+        'bowtie2': ['--version', '>=', '2.2.9'],
+        'samtools': ['--version', '==', '1.3.1'],
+        'bcftools': ['--version', '==', '1.3.1'],
+    })
 
     args.fastq = [os.path.abspath(fastq.name) for fastq in args.fastq]
 

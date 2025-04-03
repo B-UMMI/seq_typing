@@ -45,8 +45,11 @@ except ImportError:
     from seqtyping.seq_typing import python_arguments
 
 
-def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, stx2_alternative_sequenced_covered,
-                       stx2_alternative_sequence_identity):
+def stx_subtype_parser(
+        report_types,
+        stx1_reference_file, stx2_reference_file,
+        stx2_alternative_sequenced_covered, stx2_alternative_sequence_identity
+    ):
     """
     Parse the stx subtypes, specially regarding stx2 that might have multiple sequences
 
@@ -79,10 +82,10 @@ def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, s
             if not line.startswith("#"):
                 line = line.split("\t")
                 subtype = line[2]
-                if line[1] == stx1_reference_file:
+                if stx1_reference_file is not None and line[1] == stx1_reference_file:
                     if line[0] == "selected":
                         stx1_result = subtype
-                if line[1] == stx2_reference_file:
+                if stx2_reference_file is not None and line[1] == stx2_reference_file:
                     if line[0] == "selected":
                         stx2_result_main = subtype
                     elif line[0] == "other_probable_type":
@@ -99,6 +102,19 @@ def stx_subtype_parser(report_types, stx1_reference_file, stx2_reference_file, s
             stx2_result_main = "NT"
 
     return stx1_result, stx2_result_main
+
+
+def get_ref_file(refereces_list, locus_name):
+    ref_file = None
+    for ref_file_ in refereces_list:
+        if locus_name.lower() in os.path.basename(ref_file_).lower():
+            ref_file = ref_file_
+            break
+    if ref_file is None:
+        print(f"No reference file found for {locus_name}")
+    else:
+        print(f"The following reference file will be used for {locus_name} : {ref_file}")
+    return ref_file
 
 
 def main():
@@ -218,15 +234,15 @@ def main():
 
     stx1A_result, stx2A_result = stx_subtype_parser(
         os.path.join(args.outdir, "seq_typing.report_types.tab"),
-        [ref_file for ref_file in reference if "stx1A" in os.path.basename(ref_file).lower()][0],
-        [ref_file for ref_file in reference if "stx2A" in os.path.basename(ref_file).lower()][0],
-        args.stx2Acovered, args.stx2Aidentity)
+        get_ref_file(reference, "stx1A"), get_ref_file(reference, "stx2A"),
+        args.stx2Acovered, args.stx2Aidentity
+    )
 
     stx1B_result, stx2B_result = stx_subtype_parser(
         os.path.join(args.outdir, "seq_typing.report_types.tab"),
-        [ref_file for ref_file in reference if "stx1B" in os.path.basename(ref_file).lower()][0],
-        [ref_file for ref_file in reference if "stx2B" in os.path.basename(ref_file).lower()][0],
-        args.stx2Bcovered, args.stx2Bidentity)
+        get_ref_file(reference, "stx1B"), get_ref_file(reference, "stx2B"),
+        args.stx2Bcovered, args.stx2Bidentity
+    )
 
     # Rename the file to keep ecoli_stx_subtyping stamp
     if os.path.isfile(os.path.join(args.outdir, "seq_typing.report_types.tab")):

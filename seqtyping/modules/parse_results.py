@@ -7,7 +7,8 @@ except ImportError:
     from seqtyping.modules import utils as utils
 
 
-extra_blast_fields = ['alignment_length', 'query', 'q_start', 'q_end', 'q_length', 's_start', 's_end', 's_length', 'evalue', 'gaps']
+extra_blast_fields = ['alignment_length', 'query', 'q_start', 'q_end', 'q_length', 's_start', 's_end', 'evalue', 'gaps']
+fields = ['ref_length', 'gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
 
 
 def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_identity=0):
@@ -19,22 +20,20 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
     high_seq_cov = 0
     high_seq_depth = 0
     high_seq_ident = 0
-    low_seq_evalue = 1000000
 
-    fields = ['gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for gene, rematch_results in data_by_gene.items():
+
         sequenced_covered = rematch_results['gene_coverage']
         coverage_depth = rematch_results['gene_mean_read_coverage']
         sequence_identity = rematch_results['gene_identity']
-        sequence_matching_bases = rematch_results["alignment_length"] * sequence_identity / 100
-        sequence_evalue = rematch_results["evalue"]
-        if rematch_results['s_length'] != 'NA':
-            if rematch_results['gaps'] != 'NA':
-                gaps_ponderation = rematch_results['gaps'] / rematch_results['s_length'] * 100
-            else:
-                gaps_ponderation = 0
+
+        sequence_matching_bases = rematch_results["ref_length"] * sequenced_covered * sequence_identity
+
+        if rematch_results['gaps'] != 'NA':
+            gaps_ponderation = rematch_results['gaps'] / rematch_results['ref_length'] * 100
         else:
             gaps_ponderation = 0
+
         seq_cov_ceil = sequenced_covered - gaps_ponderation
 
         if sequenced_covered < min_gene_coverage:
@@ -46,31 +45,28 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
                 if sequence_identity < min_identity:
                     improbable_sequences[sequenced_covered] = gene
                 else:
-                    if sequence_matching_bases > high_seq_bases and sequence_evalue <= low_seq_evalue:
-                        low_seq_evalue = sequence_evalue
+                    if sequence_matching_bases > high_seq_bases:
                         high_seq_bases = sequence_matching_bases
                         high_seq_cov = seq_cov_ceil
                         high_seq_depth = coverage_depth
                         high_seq_ident = sequence_identity
-                    elif sequence_matching_bases == high_seq_bases and sequence_evalue <= low_seq_evalue:
+                    elif sequence_matching_bases == high_seq_bases:
                         if seq_cov_ceil > high_seq_cov:
-                            low_seq_evalue = sequence_evalue
                             high_seq_cov = seq_cov_ceil
                             high_seq_depth = coverage_depth
                             high_seq_ident = sequence_identity
                         elif seq_cov_ceil == high_seq_cov:
                             if coverage_depth > high_seq_depth:
-                                low_seq_evalue = sequence_evalue
                                 high_seq_depth = coverage_depth
                                 high_seq_ident = sequence_identity
                             elif coverage_depth == high_seq_depth:
                                 if sequence_identity > high_seq_ident:
-                                    low_seq_evalue = sequence_evalue
                                     high_seq_ident = sequence_identity
 
-                    if seq_cov_ceil == high_seq_cov and \
-                        coverage_depth == high_seq_depth and \
-                            sequence_identity == high_seq_ident:
+                    if sequence_matching_bases == high_seq_bases and \
+                        seq_cov_ceil == high_seq_cov and \
+                            coverage_depth == high_seq_depth and \
+                                sequence_identity == high_seq_ident:
                         if len(sequence) > 0:
                             probable_sequences[next(iter(sequence.values()))] = \
                                 [data_by_gene[next(iter(sequence.values()))][field] for field in fields]
@@ -89,7 +85,11 @@ def get_best_sequence(data_by_gene, min_gene_coverage, min_depth_coverage, min_i
         sequence = sequence[sorted(sequence.keys(), reverse=True)[0]]
 
     if len(improbable_sequences) > 0:
-        improbable_sequences = improbable_sequences[sorted(improbable_sequences.keys(), reverse=True)[0]]
+        sequenced_covered = sorted(improbable_sequences.keys(), reverse=True)[0]
+        if sequenced_covered > 0:
+            improbable_sequences = improbable_sequences[sequenced_covered]
+        else:
+            improbable_sequences = None
     else:
         improbable_sequences = None
 
@@ -112,7 +112,6 @@ def get_results(references_results, min_gene_coverage, min_depth_coverage, type_
         probable_results[original_reference] = []
         improbable_results[original_reference] = []
 
-    fields = ['gene_coverage', 'gene_mean_read_coverage', 'gene_identity'] + extra_blast_fields
     for reference, data in intermediate_results.items():
         sequence = data[0]
         probable_sequences = data[1]
@@ -139,18 +138,25 @@ def get_results(references_results, min_gene_coverage, min_depth_coverage, type_
                 for original_reference, headers in references_headers.items():
                     for new_header, original_header in headers.items():
                         if improbable_sequences == new_header:
-                            print('\n' +
-                                  '\n'.join(['NONE TYPEABLE REFERENCE',
-                                             'Reference file: {}'.format(original_reference),
-                                             'Most likely type: {}'.format(original_header.rsplit(type_separator, 1)[1]),
-                                             'Most likely sequence: {}'.format(original_header),
-                                             'Sequenced covered: {}'.format(
-                                                 references_results[reference][new_header]['gene_coverage']),
-                                             'Coverage depth: {}'.format(
-                                                 references_results[reference][new_header]['gene_mean_read_coverage']),
-                                             'Sequence identity: {}'.format(
-                                                 references_results[reference][new_header]['gene_identity'])]) +
-                                  '\n')
+                            print(
+                                '\n' +
+                                '\n'.join([
+                                        'NONE TYPEABLE REFERENCE',
+                                        'Reference file: {}'.format(original_reference),
+                                        'Most likely type: {}'.format(original_header.rsplit(type_separator, 1)[1]),
+                                        'Most likely sequence: {}'.format(original_header),
+                                        'Sequenced covered: {}'.format(
+                                            round(references_results[reference][new_header]['gene_coverage'], 2)
+                                        ),
+                                        'Coverage depth: {}'.format(
+                                            round(references_results[reference][new_header]['gene_mean_read_coverage'], 2)
+                                        ),
+                                        'Sequence identity: {}'.format(
+                                            round(references_results[reference][new_header]['gene_identity'], 2)
+                                        ),
+                                    ]) +
+                                '\n'
+                            )
                             improbable_results[original_reference] = \
                                 [original_header] + [references_results[reference][new_header][field]
                                                      for field in fields]
@@ -419,47 +425,50 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
         writer.write(seq_type + '\n')
 
     with open(os.path.join(outdir, 'seq_typing.report_types.tab'), 'wt') as writer:
-        writer.write('\t'.join(['#sequence_type', 'reference_file', 'type', 'sequence', 'sequenced_covered',
-                                'coverage_depth', 'sequence_identity'] + extra_blast_fields) +
+        writer.write('\t'.join(["#sequence_type", "reference_file", "type", "sequence", "ref_length", "sequenced_covered",
+                                "coverage_depth", "sequence_identity"] + extra_blast_fields) +
                      '\n')
 
         print('\n' + 'TYPEABLE REFERENCES')
         typeable_references = False
+        selected_types = set()
         for reference, data in seq_type_info.items():
             if len(data) > 0:
-                gene_coverage = data[1]
-                data[1] = round(data[1], 2)
+                selected_type = data[0].rsplit(type_separator, 1)[1]
+                selected_types.add(selected_type)
+
+                seq_identity = data[4]
+                gene_coverage = data[2]
+                data[2] = round(gene_coverage, 2)
 
                 print('\n' +
                       '\n'.join(['Reference file: {}'.format(reference),
-                                 'Type: {}'.format(data[0].rsplit(type_separator, 1)[1]),
+                                 'Type: {}'.format(selected_type),
                                  'Sequence: {}'.format(data[0]),
-                                 'Sequenced covered: {}'.format(data[1]),
-                                 'Coverage depth: {}'.format(data[2]),
-                                 'Sequence identity: {}'.format(data[3])]) +
+                                 'Sequenced covered: {}'.format(data[2]),
+                                 'Coverage depth: {}'.format(data[3]),
+                                 'Sequence identity: {}'.format(seq_identity)]) +
                       '\n')
-                writer.write('\t'.join(['selected', reference, data[0].rsplit(type_separator, 1)[1]] +
+                writer.write('\t'.join(['selected', reference, selected_type] +
                                        list(map(str, data))) + '\n')
 
                 if save_new_allele:
-                    if assembly is None:
-                        if gene_coverage < 100 or data[3] < 100:
-                            new_allele_found = True
+                    if gene_coverage != 100 or seq_identity < 100:
+                        new_allele_found = True
+                        if assembly is None:
                             rematch_consensus = os.path.join(outdir, 'rematch', 'new_allele',
                                                              os.path.basename(reference))
                             save_new_allele_reads(sample=sample, new_allele_dir=new_allele_dir,
                                                   rematch_consensus=rematch_consensus, sequence_selected=data[0],
-                                                  selected_type=data[0].rsplit(type_separator, 1)[1],
+                                                  selected_type=selected_type,
                                                   type_in_new=type_in_new, type_separator=type_separator)
-                    else:
-                        if gene_coverage != 100 or data[3] < 100:
-                            new_allele_found = True
+                        else:
                             save_new_allele_assembly(sample=sample, new_allele_dir=new_allele_dir,
-                                                     reference_file=reference, query=data[5],
-                                                     selected_type=data[0].rsplit(type_separator, 1)[1],
-                                                     assembly=assembly, q_start=data[6], q_end=data[7],
-                                                     q_length=data[8], s_start=data[9], s_end=data[10],
-                                                     s_length=data[11], extra_seq=extra_seq,
+                                                     reference_file=reference, query=data[6],
+                                                     selected_type=selected_type,
+                                                     assembly=assembly, q_start=data[7], q_end=data[8],
+                                                     q_length=data[9], s_start=data[10], s_end=data[11],
+                                                     s_length=data[1], extra_seq=extra_seq,
                                                      type_in_new=type_in_new, type_separator=type_separator)
 
                 typeable_references = True
@@ -472,10 +481,17 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
 
         for reference, types in probable_results.items():
             if len(types) > 0:
-                print('\n' +
-                      'Other possible types found for {reference}!\n'
-                      'Check seq_typing.report.other_probable_types.tab file.'.format(reference=reference) +
-                      '\n')
+                _probable_types = set(map(lambda probable_type: probable_type[0].rsplit(type_separator, 1)[1], types))
+                new_probable_types = _probable_types.difference(selected_type)
+
+                if len(new_probable_types) > 0:
+                    print(
+                        "\n"
+                        f"Other possible types found for {reference}!\n"
+                        "Check other_probable_type in sequence_type column (first) in seq_typing.report_types.tab file."
+                        "\n"
+                    )
+
                 for probable_type in types:
                     probable_type[1] = round(probable_type[1], 2)
                     writer.write('\t'.join(['other_probable_type',
@@ -485,7 +501,7 @@ def write_reports(outdir, seq_type, seq_type_info, probable_results, improbable_
 
         for reference, data in improbable_results.items():
             if len(data) > 0:
-                data[1] = round(data[1], 2)
+                data[2] = round(data[2], 2)
                 writer.write('\t'.join(['most_likely', reference, data[0].rsplit(type_separator, 1)[1]] +
                                        list(map(str, data))) + '\n')
 
