@@ -177,7 +177,7 @@ def add_empty_blast_info(data_dict):
     Returns
     -------
     data_dict : dict
-        Return the input dictionary already with ['query', 'q_start', 'q_end', 'ref_length', 's_start', 's_end',
+        Return the input dictionary already with ['query', 'q_start', 'q_end', 'q_length', 's_start', 's_end',
         's_length', 'evalue', 'gaps'] fields as 'NA'
     """
     for field in extra_blast_fields:
